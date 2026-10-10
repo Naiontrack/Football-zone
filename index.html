@@ -17,7 +17,7 @@
       height: 100%;
       overflow: hidden;
       font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
-      background-color: #050b14;
+      background-color: #030712;
       color: #fff;
     }
     #canvas-container {
@@ -162,24 +162,17 @@
       background: rgba(20, 35, 60, 0.95);
     }
 
-    /* CENTER CROSSHAIR & SHOOTING RETICLE */
-    #crosshair-container {
+    /* CENTER CROSSHAIR & PERFECTLY CENTERED SHOOTING RETICLE */
+    #crosshair {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    #crosshair {
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
       border: 2px solid rgba(255, 255, 255, 0.85);
       border-radius: 50%;
-      position: relative;
+      pointer-events: none;
       transition: transform 0.15s ease, border-color 0.2s ease;
     }
     #crosshair::before {
@@ -195,41 +188,46 @@
     }
     #crosshair.ball-near {
       border-color: #00ff88;
-      transform: scale(1.4);
+      transform: translate(-50%, -50%) scale(1.4);
       box-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
     }
     #crosshair.ball-near::before {
       background: #00ff88;
     }
 
-    /* DYNAMIC AIMING RETICLE (Appare durante la carica del tiro) */
+    /* MIRINO DINAMICO DI TIRO RIGOROSAMENTE CENTRATO AL 50% */
     #aim-reticle {
       position: absolute;
-      width: 90px;
-      height: 90px;
+      top: 50%;
+      left: 50%;
+      width: 80px;
+      height: 80px;
+      margin-top: -40px;
+      margin-left: -40px;
       border: 2px dashed #00f0ff;
       border-radius: 50%;
       pointer-events: none;
       display: none;
-      box-shadow: 0 0 25px rgba(0, 240, 255, 0.7), inset 0 0 15px rgba(0, 240, 255, 0.4);
-      animation: rotateReticle 6s linear infinite;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.8), inset 0 0 15px rgba(0, 240, 255, 0.4);
+      animation: rotateAim 5s linear infinite;
     }
     #aim-reticle::after {
       content: '';
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
+      margin-top: -7px;
+      margin-left: -7px;
       border: 2px solid #ff0055;
       border-radius: 50%;
-      background: rgba(255, 0, 85, 0.5);
-      box-shadow: 0 0 10px #ff0055;
+      background: rgba(255, 0, 85, 0.6);
+      box-shadow: 0 0 12px #ff0055;
     }
-    @keyframes rotateReticle {
-      0% { transform: translate(-50%, -50%) rotate(0deg); }
-      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    @keyframes rotateAim {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     /* Power meter */
@@ -256,7 +254,7 @@
       transition: width 0.04s linear;
     }
 
-    /* Action Banner / Notifications */
+    /* Toast Notifica Azioni */
     #action-toast {
       position: absolute;
       bottom: 140px;
@@ -375,7 +373,7 @@
       border-color: #00f0ff;
     }
 
-    /* SETTINGS MODAL (PERSONALIZZAZIONE COMANDI) */
+    /* SETTINGS MODAL (PERSONALIZZAZIONE COMANDI CON CONTROLLER) */
     #settings-modal {
       position: absolute;
       top: 0;
@@ -401,7 +399,7 @@
     }
     .settings-box {
       width: 100%;
-      max-width: 620px;
+      max-width: 660px;
       background: linear-gradient(135deg, rgba(20, 35, 60, 0.95), rgba(10, 20, 35, 0.98));
       border: 1.5px solid rgba(0, 240, 255, 0.3);
       border-radius: 24px;
@@ -414,7 +412,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 22px;
+      margin-bottom: 18px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       padding-bottom: 14px;
     }
@@ -424,6 +422,11 @@
       color: #00f0ff;
       text-transform: uppercase;
       letter-spacing: 1px;
+    }
+    .settings-hint {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 18px;
     }
     .close-btn {
       background: none;
@@ -465,7 +468,7 @@
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
-      min-width: 100px;
+      min-width: 140px;
       text-align: center;
       transition: all 0.2s ease;
     }
@@ -551,18 +554,15 @@
     </div>
 
     <!-- Center Crosshairs -->
-    <div id="crosshair-container">
-      <div id="crosshair"></div>
-      <!-- Reticolo mirino dinamico di tiro -->
-      <div id="aim-reticle"></div>
-    </div>
+    <div id="crosshair"></div>
+    <div id="aim-reticle"></div>
 
     <!-- Power Meter -->
     <div id="power-meter-box">
       <div id="power-bar"></div>
     </div>
 
-    <!-- Toast Notifica Azioni (Scivolata / Contrasto) -->
+    <!-- Toast Notifica Azioni -->
     <div id="action-toast">Possesso Recuperato!</div>
   </div>
 
@@ -571,7 +571,7 @@
     <div class="modal-box">
       <div class="modal-logo">⚽</div>
       <h1 class="modal-title">Football Zone</h1>
-      <p class="modal-subtitle">Calcio in prima persona con grafica stadio spettacolare, spettatori e controllo totale</p>
+      <p class="modal-subtitle">Calcio in prima persona: stadio pieno, fisica libera e controllo totale</p>
       
       <div class="modal-actions">
         <button class="btn-primary" id="start-button">ENTRA IN CAMPO</button>
@@ -587,6 +587,7 @@
         <h2 class="settings-title">Personalizza Comandi</h2>
         <button class="close-btn" id="close-settings-btn">✕</button>
       </div>
+      <p class="settings-hint">Clicca su un'azione e premi un tasto sulla Tastiera, un tasto del Mouse, oppure un pulsante/grilletto sul tuo Controller!</p>
       
       <div class="controls-list" id="controls-list">
         <!-- Generato dinamicamente da JS -->
@@ -604,25 +605,45 @@
 
   <!-- GAME ENGINE LOGIC -->
   <script>
-    // --- 1. GESTIONE COMANDI E PERSONALIZZAZIONE (KEYBINDINGS) ---
+    // --- 1. COMANDI E PERSONALIZZAZIONE (TASTIERA, MOUSE E CONTROLLER) ---
     const DEFAULT_BINDINGS = {
-      forward: { label: 'Avanti', key: 'KeyW', display: 'W' },
-      backward: { label: 'Indietro', key: 'KeyS', display: 'S' },
-      left: { label: 'Sinistra', key: 'KeyA', display: 'A' },
-      right: { label: 'Destra', key: 'KeyD', display: 'D' },
-      sprint: { label: 'Corsa / Scatto', key: 'ShiftLeft', display: 'Shift SX' },
-      jump: { label: 'Salto', key: 'Space', display: 'Spazio' },
-      shoot: { label: 'Tiro / Calcio', key: 'Mouse0', display: 'Mouse SX' },
-      slide: { label: 'Scivolata', key: 'KeyC', display: 'C' },
-      tackle: { label: 'Contrasto in piedi', key: 'KeyF', display: 'F' },
-      reset: { label: 'Reset Pallone', key: 'KeyR', display: 'R' }
+      forward:  { label: 'Avanti', type: 'keyboard', code: 'KeyW', display: 'W' },
+      backward: { label: 'Indietro', type: 'keyboard', code: 'KeyS', display: 'S' },
+      left:     { label: 'Sinistra', type: 'keyboard', code: 'KeyA', display: 'A' },
+      right:    { label: 'Destra', type: 'keyboard', code: 'KeyD', display: 'D' },
+      sprint:   { label: 'Corsa / Scatto', type: 'keyboard', code: 'ShiftLeft', display: 'Shift SX' },
+      jump:     { label: 'Salto', type: 'keyboard', code: 'Space', display: 'Spazio' },
+      shoot:    { label: 'Tiro / Calcio', type: 'mouse', code: 0, display: 'Mouse SX' },
+      slide:    { label: 'Scivolata', type: 'keyboard', code: 'KeyC', display: 'C' },
+      tackle:   { label: 'Contrasto in piedi', type: 'keyboard', code: 'KeyF', display: 'F' },
+      reset:    { label: 'Reset Pallone', type: 'keyboard', code: 'KeyR', display: 'R' }
     };
 
-    let userBindings = JSON.parse(localStorage.getItem('football_zone_bindings')) || JSON.parse(JSON.stringify(DEFAULT_BINDINGS));
+    let userBindings = JSON.parse(localStorage.getItem('football_zone_bindings_v2')) || JSON.parse(JSON.stringify(DEFAULT_BINDINGS));
 
     function saveBindings() {
-      localStorage.setItem('football_zone_bindings', JSON.stringify(userBindings));
+      localStorage.setItem('football_zone_bindings_v2', JSON.stringify(userBindings));
     }
+
+    // Mappatura nomi pulsanti Controller standard (Xbox / PlayStation)
+    const GAMEPAD_BUTTON_NAMES = {
+      0: '🎮 A / ✕',
+      1: '🎮 B / ◯',
+      2: '🎮 X / □',
+      3: '🎮 Y / △',
+      4: '🎮 Dorsale LB / L1',
+      5: '🎮 Dorsale RB / R1',
+      6: '🎮 Grilletto LT / L2',
+      7: '🎮 Grilletto RT / R2',
+      8: '🎮 Select / Share',
+      9: '🎮 Start / Options',
+      10: '🎮 Click Levetta L3',
+      11: '🎮 Click Levetta R3',
+      12: '🎮 D-Pad Su',
+      13: '🎮 D-Pad Giù',
+      14: '🎮 D-Pad Sinistra',
+      15: '🎮 D-Pad Destra'
+    };
 
     // --- 2. SINTESI AUDIO WEB AUDIO API ---
     class SoundEngine {
@@ -656,8 +677,7 @@
       playSlide() {
         if (!this.ctx) return;
         const now = this.ctx.currentTime;
-        // Rumore bianco filtrato (fruscio erba)
-        const bufferSize = this.ctx.sampleRate * 0.4;
+        const bufferSize = this.ctx.sampleRate * 0.45;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
@@ -665,16 +685,16 @@
         noise.buffer = buffer;
         const filter = this.ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(800, now);
-        filter.frequency.exponentialRampToValueAtTime(250, now + 0.35);
+        filter.frequency.setValueAtTime(750, now);
+        filter.frequency.exponentialRampToValueAtTime(220, now + 0.4);
         const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
         noise.connect(filter);
         filter.connect(gain);
         gain.connect(this.ctx.destination);
         noise.start(now);
-        noise.stop(now + 0.4);
+        noise.stop(now + 0.45);
       }
       playTackle() {
         if (!this.ctx) return;
@@ -761,8 +781,8 @@
     // --- 4. THREE.JS SCENE SETUP ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x64b5f6); // Cielo limpido da stadio
-    scene.fog = new THREE.FogExp2(0x64b5f6, 0.005);
+    scene.background = new THREE.Color(0x64b5f6);
+    scene.fog = new THREE.FogExp2(0x64b5f6, 0.004);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -774,34 +794,32 @@
     renderer.toneMappingExposure = 1.05;
     container.appendChild(renderer.domElement);
 
-    // Luce emisferica e solare potente
+    // Illuminazione stadio
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334433, 0.7);
     scene.add(hemiLight);
 
     const sunLight = new THREE.DirectionalLight(0xfffaed, 1.05);
-    sunLight.position.set(45, 75, 35);
+    sunLight.position.set(45, 80, 35);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 10;
-    sunLight.shadow.camera.far = 200;
-    const sd = 65;
+    sunLight.shadow.camera.far = 220;
+    const sd = 70;
     sunLight.shadow.camera.left = -sd;
     sunLight.shadow.camera.right = sd;
     sunLight.shadow.camera.top = sd;
     sunLight.shadow.camera.bottom = -sd;
     scene.add(sunLight);
 
-    // --- 5. GENERATORE TEXTURE CAMPO REGOLAMENTARE FIFA (NO SOVRAPPOSIZIONI) ---
+    // --- 5. TEXTURE CAMPO REGOLAMENTARE FIFA ---
     function createRegulationPitchTexture() {
-      // Usiamo una risoluzione rigorosamente proporzionale al campo (64m x 100m)
-      // Larghezza 2048 px -> 32 px/metro esatti. Lunghezza: 100m * 32 = 3200 px.
       const canvas = document.createElement('canvas');
       canvas.width = 2048;
       canvas.height = 3200;
       const ctx = canvas.getContext('2d');
 
-      const PXM = canvas.width / FIELD_WIDTH; // 32 pixel per metro perfetto in X e Y
+      const PXM = canvas.width / FIELD_WIDTH; // 32 pixel/metro esatti
 
       // 1. Manto erboso con strisce alternate
       const stripes = 20;
@@ -811,16 +829,15 @@
         ctx.fillRect(0, i * stripeH, canvas.width, stripeH);
       }
 
-      // Micro-texture erba
       ctx.fillStyle = 'rgba(0, 0, 0, 0.025)';
       for (let i = 0; i < 50000; i++) {
         ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
       }
 
-      // 2. Tracciatura Segnaletica Bianca (Linea spessore 12cm = ~4 pixel)
+      // 2. Tracciatura Segnaletica Bianca
       ctx.strokeStyle = '#ffffff';
       ctx.fillStyle = '#ffffff';
-      ctx.lineWidth = Math.round(0.12 * PXM); // 12 cm regolamentari
+      ctx.lineWidth = Math.round(0.12 * PXM);
       ctx.lineCap = 'square';
       ctx.lineJoin = 'miter';
 
@@ -832,79 +849,66 @@
       const midY = canvas.height / 2;
       const midX = canvas.width / 2;
 
-      // Linee perimetrali esterne
       ctx.strokeRect(left, top, right - left, bottom - top);
 
-      // Linea di metà campo
       ctx.beginPath();
       ctx.moveTo(left, midY);
       ctx.lineTo(right, midY);
       ctx.stroke();
 
-      // Cerchio di centrocampo (Raggio esatto 9.15m)
       const centerCircleRadius = 9.15 * PXM;
       ctx.beginPath();
       ctx.arc(midX, midY, centerCircleRadius, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Punto di centrocampo (diametro 22cm)
       ctx.beginPath();
       ctx.arc(midX, midY, 0.2 * PXM, 0, Math.PI * 2);
       ctx.fill();
 
-      // Bandierine d'angolo: archetti d'angolo di 1 metro
+      // Archetti d'angolo
       const cornerR = 1.0 * PXM;
       ctx.beginPath(); ctx.arc(left, top, cornerR, 0, Math.PI / 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(right, top, cornerR, Math.PI / 2, Math.PI); ctx.stroke();
       ctx.beginPath(); ctx.arc(left, bottom, cornerR, -Math.PI / 2, 0); ctx.stroke();
       ctx.beginPath(); ctx.arc(right, bottom, cornerR, Math.PI, -Math.PI / 2); ctx.stroke();
 
-      // Funzione per disegnare le Aree di Rigore in modo geometricamente perfetto
+      // Aree di Rigore
       function drawPenaltyArea(isTop) {
         const goalLineY = isTop ? top : bottom;
         const dir = isTop ? 1 : -1;
 
-        // Area di Rigore Grande: 40.32m larghezza, 16.5m profondità
         const boxW = 40.32 * PXM;
         const boxD = 16.5 * PXM;
         const boxX = midX - boxW / 2;
         const boxY = isTop ? goalLineY : goalLineY - boxD;
         ctx.strokeRect(boxX, boxY, boxW, boxD);
 
-        // Area Piccola (Area di Porta): 18.32m larghezza, 5.5m profondità
         const smallW = 18.32 * PXM;
         const smallD = 5.5 * PXM;
         const smallX = midX - smallW / 2;
         const smallY = isTop ? goalLineY : goalLineY - smallD;
         ctx.strokeRect(smallX, smallY, smallW, smallD);
 
-        // Dischetto del rigore: 11.0m esatti dalla linea di porta
         const penSpotY = goalLineY + dir * (11.0 * PXM);
         ctx.beginPath();
         ctx.arc(midX, penSpotY, 0.2 * PXM, 0, Math.PI * 2);
         ctx.fill();
 
-        // LUNETTA DELL'AREA DI RIGORE (CORREZIONE IMMAGINE 1):
-        // Raggio 9.15m centrato sul dischetto.
-        // La distanza dal dischetto (11m) alla linea dell'area grande (16.5m) è 5.5m.
-        // Intersezione: sin(angolo) = 5.5 / 9.15 ≈ 0.60109.
-        // L'arco deve comparire ESCLUSIVAMENTE ALL'ESTERNO dell'area di rigore!
+        // Lunetta dell'area di rigore: solo all'esterno dell'area
         const arcR = 9.15 * PXM;
-        const cutAngle = Math.asin(5.5 / 9.15); // ~0.645 rad (~37°)
+        const cutAngle = Math.asin(5.5 / 9.15);
 
         ctx.beginPath();
         if (isTop) {
-          // Verso il centro del campo (angolo verso il basso, y positivo)
           ctx.arc(midX, penSpotY, arcR, cutAngle, Math.PI - cutAngle, false);
         } else {
-          // Verso il centro del campo (angolo verso l'alto, y negativo)
           ctx.arc(midX, penSpotY, arcR, Math.PI + cutAngle, 2 * Math.PI - cutAngle, false);
         }
         ctx.stroke();
       }
 
-      drawPenaltyArea(true);  // Nord
-      drawPenaltyArea(false); // Sud
+      drawPenaltyArea(true);
+      drawPenaltyArea(false);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -913,7 +917,6 @@
       return texture;
     }
 
-    // Creazione mesh campo
     const pitchGeo = new THREE.PlaneGeometry(FIELD_WIDTH, FIELD_LENGTH);
     const pitchMat = new THREE.MeshStandardMaterial({
       map: createRegulationPitchTexture(),
@@ -925,7 +928,6 @@
     pitchMesh.receiveShadow = true;
     scene.add(pitchMesh);
 
-    // Manto esterno circostante
     const surroundGeo = new THREE.PlaneGeometry(FIELD_WIDTH + 34, FIELD_LENGTH + 34);
     const surroundMat = new THREE.MeshStandardMaterial({ color: 0x184c1b, roughness: 0.95 });
     const surroundMesh = new THREE.Mesh(surroundGeo, surroundMat);
@@ -941,22 +943,16 @@
       boardCanvas.height = 128;
       const bCtx = boardCanvas.getContext('2d');
 
-      // Sfondo nero/blu notte LED
       bCtx.fillStyle = '#050c18';
       bCtx.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
-
-      // Linea superiore e inferiore neon
       bCtx.fillStyle = '#00f0ff';
       bCtx.fillRect(0, 0, boardCanvas.width, 4);
       bCtx.fillStyle = '#00ff88';
       bCtx.fillRect(0, boardCanvas.height - 4, boardCanvas.width, 4);
 
-      // Testo "⚽ Football Zone ⚽"
       bCtx.font = '900 48px sans-serif';
       bCtx.textAlign = 'center';
       bCtx.textBaseline = 'middle';
-
-      // Effetto neon glow
       bCtx.shadowColor = '#00f0ff';
       bCtx.shadowBlur = 18;
       bCtx.fillStyle = '#ffffff';
@@ -999,29 +995,58 @@
     }
     createLEDAdBoards();
 
-    // --- 7. STADIO MONUMENTALE CON TRIBUNE E SPETTATORI 3D ---
-    function buildGrandStadium() {
-      // 1. Struttura gradoni (Grandstands)
-      const concreteMat = new THREE.MeshStandardMaterial({ color: 0x223046, roughness: 0.85 });
-      const seatColorPalette = [0x00f0ff, 0xff0055, 0xffbb00, 0xffffff, 0x00ff88, 0x1e3a8a];
+    // --- 7. STADIO CORRETTO: SPALTI VERSO L'ESTERNO E COMPLETAMENTE PIENI DI SPETTATORI ---
+    function buildGrandStadiumCorrected() {
+      const concreteMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 });
+      const seatColorPalette = [0x00f0ff, 0xff0055, 0xffbb00, 0xffffff, 0x00ff88, 0x3b82f6, 0xec4899, 0xa855f7];
 
-      // Coordinate delle 4 tribune attorno al campo
+      // Definiamo le 4 tribune.
+      // Il campo ha centro a (0, 0).
+      // Per orientare gli spalti correttamente:
+      // La prima fila (bassa) è VICINA al campo (distanza minima).
+      // Salendo in altezza (Y crescente), la fila si ALLONTANA DAL CAMPO verso l'esterno (+Z locale crescente verso l'esterno).
       const standsConfigs = [
-        // Ovest (lungo asse Z)
-        { x: -FIELD_WIDTH / 2 - 16, z: 0, rotY: Math.PI / 2, length: FIELD_LENGTH + 20, width: 22, height: 16 },
-        // Est
-        { x:  FIELD_WIDTH / 2 + 16, z: 0, rotY: -Math.PI / 2, length: FIELD_LENGTH + 20, width: 22, height: 16 },
-        // Nord (dietro porta Nord)
-        { x: 0, z: -FIELD_LENGTH / 2 - 16, rotY: 0, length: FIELD_WIDTH + 20, width: 22, height: 16 },
-        // Sud (dietro porta Sud)
-        { x: 0, z:  FIELD_LENGTH / 2 + 16, rotY: Math.PI, length: FIELD_WIDTH + 20, width: 22, height: 16 }
+        // Tribuna Ovest (asse X negativo): guarda verso +X (centro)
+        { 
+          posX: -FIELD_WIDTH / 2 - 3.5, posZ: 0, 
+          dirX: -1, dirZ: 0, // Si sviluppa allontanandosi verso -X
+          rotY: -Math.PI / 2, 
+          length: FIELD_LENGTH + 8, width: 20, height: 16 
+        },
+        // Tribuna Est (asse X positivo): guarda verso -X (centro)
+        { 
+          posX: FIELD_WIDTH / 2 + 3.5, posZ: 0, 
+          dirX: 1, dirZ: 0, // Si sviluppa allontanandosi verso +X
+          rotY: Math.PI / 2, 
+          length: FIELD_LENGTH + 8, width: 20, height: 16 
+        },
+        // Curva Nord (dietro porta Nord, Z negativo): guarda verso +Z (centro)
+        { 
+          posX: 0, posZ: -FIELD_LENGTH / 2 - 4.2, 
+          dirX: 0, dirZ: -1, // Si sviluppa allontanandosi verso -Z
+          rotY: Math.PI, 
+          length: FIELD_WIDTH + 8, width: 20, height: 16 
+        },
+        // Curva Sud (dietro porta Sud, Z positivo): guarda verso -Z (centro)
+        { 
+          posX: 0, posZ: FIELD_LENGTH / 2 + 4.2, 
+          dirX: 0, dirZ: 1, // Si sviluppa allontanandosi verso +Z
+          rotY: 0, 
+          length: FIELD_WIDTH + 8, width: 20, height: 16 
+        }
       ];
 
-      // Mesh instanziata per gli spettatori (migliaia di spettatori ad alte prestazioni a 60FPS)
-      const spectatorGeo = new THREE.CylinderGeometry(0.2, 0.25, 0.8, 6);
+      // Calcoliamo la capienza totale per riempire OGNI panchina al 100%
+      const steps = 14;
+      let totalCapacity = 0;
+      standsConfigs.forEach(conf => {
+        const spectatorsPerRow = Math.floor(conf.length / 0.85);
+        totalCapacity += steps * spectatorsPerRow;
+      });
+
+      const spectatorGeo = new THREE.CylinderGeometry(0.22, 0.26, 0.82, 6);
       const spectatorMat = new THREE.MeshStandardMaterial({ roughness: 0.7 });
-      const TOTAL_SPECTATORS = 3600;
-      const spectatorMesh = new THREE.InstancedMesh(spectatorGeo, spectatorMat, TOTAL_SPECTATORS);
+      const spectatorMesh = new THREE.InstancedMesh(spectatorGeo, spectatorMat, totalCapacity);
       spectatorMesh.castShadow = true;
       let spectatorIndex = 0;
 
@@ -1030,70 +1055,55 @@
 
       standsConfigs.forEach(conf => {
         const standGroup = new THREE.Group();
-        const steps = 14;
         const stepW = conf.width / steps;
         const stepH = conf.height / steps;
+        const spectatorsPerRow = Math.floor(conf.length / 0.85);
 
         for (let s = 0; s < steps; s++) {
-          const tierGeo = new THREE.BoxGeometry(conf.length, stepH, stepW * (steps - s));
+          // Gradone: salendo (s aumenta), si ALLONTANA dal campo lungo l'asse Z locale (+Z locale)
+          const tierZ = s * stepW + stepW / 2;
+          const tierY = s * stepH + stepH / 2;
+
+          const tierGeo = new THREE.BoxGeometry(conf.length, stepH, stepW);
           const tier = new THREE.Mesh(tierGeo, concreteMat);
-          tier.position.set(0, s * stepH + stepH / 2, s * stepW);
+          tier.position.set(0, tierY, tierZ);
           tier.receiveShadow = true;
           standGroup.add(tier);
 
-          // Posiziona gli spettatori su ciascun gradone
-          const countOnTier = Math.floor(conf.length / 1.4);
-          for (let i = 0; i < countOnTier && spectatorIndex < TOTAL_SPECTATORS; i++) {
-            if (Math.random() > 0.15) { // 85% affollamento
-              const localX = (i - countOnTier / 2) * 1.4 + (Math.random() - 0.5) * 0.3;
-              const localY = s * stepH + stepH + 0.4;
-              const localZ = s * stepW + (Math.random() - 0.5) * 0.2;
+          // RIEMPIMENTO COMPLETO: Ogni posto è occupato al 100% (panchine piene!)
+          for (let i = 0; i < spectatorsPerRow && spectatorIndex < totalCapacity; i++) {
+            const localX = (i - spectatorsPerRow / 2) * 0.85 + 0.42;
+            const localY = (s + 1) * stepH + 0.41;
+            const localZ = tierZ;
 
-              dummy.position.set(localX, localY, localZ);
-              dummy.rotation.y = (Math.random() - 0.5) * 0.4;
-              dummy.updateMatrix();
+            dummy.position.set(localX, localY, localZ);
+            dummy.rotation.set(0, 0, 0);
+            dummy.updateMatrix();
 
-              // Trasforma nel sistema globale dello stadio
-              const standMatrix = new THREE.Matrix4();
-              standMatrix.makeRotationY(conf.rotY);
-              standMatrix.setPosition(conf.x, 0, conf.z);
+            const standMatrix = new THREE.Matrix4();
+            standMatrix.makeRotationY(conf.rotY);
+            standMatrix.setPosition(conf.posX, 0, conf.posZ);
 
-              const globalMatrix = new THREE.Matrix4().multiplyMatrices(standMatrix, dummy.matrix);
-              spectatorMesh.setMatrixAt(spectatorIndex, globalMatrix);
+            const globalMatrix = new THREE.Matrix4().multiplyMatrices(standMatrix, dummy.matrix);
+            spectatorMesh.setMatrixAt(spectatorIndex, globalMatrix);
 
-              // Colore maglia casuale
-              const col = seatColorPalette[Math.floor(Math.random() * seatColorPalette.length)];
-              colorHelper.setHex(col);
-              spectatorMesh.setColorAt(spectatorIndex, colorHelper);
-              spectatorIndex++;
-            }
+            const col = seatColorPalette[(s * 3 + i) % seatColorPalette.length];
+            colorHelper.setHex(col);
+            spectatorMesh.setColorAt(spectatorIndex, colorHelper);
+            spectatorIndex++;
           }
         }
 
-        // Tetto / Copertura moderna dello stadio
-        const roofGeo = new THREE.BoxGeometry(conf.length + 4, 0.6, conf.width + 10);
-        const roofMat = new THREE.MeshStandardMaterial({
-          color: 0x1e293b,
-          roughness: 0.4,
-          metalness: 0.7
-        });
+        // Tetto moderno dello stadio a sbalzo verso l'esterno
+        const roofGeo = new THREE.BoxGeometry(conf.length + 4, 0.6, conf.width + 6);
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.35, metalness: 0.8 });
         const roof = new THREE.Mesh(roofGeo, roofMat);
-        roof.position.set(0, conf.height + 4, conf.width / 2 - 2);
-        roof.rotation.x = 0.08;
+        roof.position.set(0, conf.height + 3.5, conf.width / 2);
+        roof.rotation.x = -0.05; // inclinato dolcemente
         roof.castShadow = true;
         standGroup.add(roof);
 
-        // Tralicci di sostegno metallici
-        const trussGeo = new THREE.CylinderGeometry(0.35, 0.35, conf.height + 5, 8);
-        const trussMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85 });
-        const t1 = new THREE.Mesh(trussGeo, trussMat);
-        t1.position.set(-conf.length / 2 + 2, (conf.height + 5) / 2, conf.width);
-        standGroup.add(t1);
-        const t2 = t1.clone();
-        t2.position.x = conf.length / 2 - 2;
-        standGroup.add(t2);
-
-        standGroup.position.set(conf.x, 0, conf.z);
+        standGroup.position.set(conf.posX, 0, conf.posZ);
         standGroup.rotation.y = conf.rotY;
         scene.add(standGroup);
       });
@@ -1102,7 +1112,7 @@
       if (spectatorMesh.instanceColor) spectatorMesh.instanceColor.needsUpdate = true;
       scene.add(spectatorMesh);
     }
-    buildGrandStadium();
+    buildGrandStadiumCorrected();
 
     // Bandierine d'angolo
     function createCornerFlags() {
@@ -1133,19 +1143,16 @@
     }
     createCornerFlags();
 
-    // --- 8. RETI DELLA PORTA 3D REALISTICHE (TRAPEZIO PROFONDO CON TRAMA FITTA) ---
+    // --- 8. RETI DELLA PORTA 3D REALISTICHE ---
     const goalColliders = [];
 
     function createRealisticGoalNet(zPos, isNorth) {
       const goalGroup = new THREE.Group();
       const postRadius = 0.08;
-      const postMat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.15,
-        metalness: 0.2
-      });
+      const postMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15, metalness: 0.2 });
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.3 });
 
-      // 1. Pali frontali bianchi
+      // Pali frontali
       const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, GOAL_HEIGHT, 16);
       const leftPost = new THREE.Mesh(postGeo, postMat);
       leftPost.position.set(-GOAL_WIDTH / 2, GOAL_HEIGHT / 2, 0);
@@ -1156,7 +1163,7 @@
       rightPost.position.x = GOAL_WIDTH / 2;
       goalGroup.add(rightPost);
 
-      // Traversa superiore
+      // Traversa
       const barGeo = new THREE.CylinderGeometry(postRadius, postRadius, GOAL_WIDTH, 16);
       const crossbar = new THREE.Mesh(barGeo, postMat);
       crossbar.rotation.z = Math.PI / 2;
@@ -1164,29 +1171,37 @@
       crossbar.castShadow = true;
       goalGroup.add(crossbar);
 
-      // 2. Telaio posteriore e montanti
+      // Vertici 3D esatti della porta
       const depthSign = isNorth ? -1 : 1;
-      const frameMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7 });
+      const W2 = GOAL_WIDTH / 2;
+      const H = GOAL_HEIGHT;
+      const D_top = depthSign * GOAL_DEPTH_TOP;
+      const D_bot = depthSign * GOAL_DEPTH_BOTTOM;
 
-      // Supporti orizzontali superiori (stanchions)
-      const topStanchionGeo = new THREE.CylinderGeometry(0.04, 0.04, GOAL_DEPTH_TOP, 8);
-      const topL = new THREE.Mesh(topStanchionGeo, frameMat);
-      topL.rotation.x = Math.PI / 2;
-      topL.position.set(-GOAL_WIDTH / 2, GOAL_HEIGHT, depthSign * (GOAL_DEPTH_TOP / 2));
-      goalGroup.add(topL);
+      // Funzione per creare tubi metallici di sostegno retti tra due punti 3D qualsiasi
+      function createTube(pA, pB, radius, mat) {
+        const vA = new THREE.Vector3(...pA);
+        const vB = new THREE.Vector3(...pB);
+        const dist = vA.distanceTo(vB);
+        const geo = new THREE.CylinderGeometry(radius, radius, dist, 12);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(vA).add(vB).multiplyScalar(0.5);
+        const dir = new THREE.Vector3().subVectors(vB, vA).normalize();
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        mesh.castShadow = true;
+        return mesh;
+      }
 
-      const topR = topL.clone();
-      topR.position.x = GOAL_WIDTH / 2;
-      goalGroup.add(topR);
+      // Telaio metallico posteriore
+      goalGroup.add(createTube([-W2, H, 0], [-W2, H, D_top], 0.04, frameMat)); // Stanchion top SX
+      goalGroup.add(createTube([ W2, H, 0], [ W2, H, D_top], 0.04, frameMat)); // Stanchion top DX
+      goalGroup.add(createTube([-W2, H, D_top], [-W2, 0, D_bot], 0.04, frameMat)); // Diagonale SX
+      goalGroup.add(createTube([ W2, H, D_top], [ W2, 0, D_bot], 0.04, frameMat)); // Diagonale DX
+      goalGroup.add(createTube([-W2, 0, 0], [-W2, 0, D_bot], 0.04, frameMat)); // Base a terra SX
+      goalGroup.add(createTube([ W2, 0, 0], [ W2, 0, D_bot], 0.04, frameMat)); // Base a terra DX
+      goalGroup.add(createTube([-W2, 0, D_bot], [ W2, 0, D_bot], 0.04, frameMat)); // Barra posteriore a terra
 
-      // Supporto a terra posteriore
-      const groundBackGeo = new THREE.CylinderGeometry(0.04, 0.04, GOAL_WIDTH, 8);
-      const groundBack = new THREE.Mesh(groundBackGeo, frameMat);
-      groundBack.rotation.z = Math.PI / 2;
-      groundBack.position.set(0, 0.04, depthSign * GOAL_DEPTH_BOTTOM);
-      goalGroup.add(groundBack);
-
-      // 3. Texture procedurale a maglia fitta di rete (Net Texture)
+      // Texture della rete
       const netCanvas = document.createElement('canvas');
       netCanvas.width = 128;
       netCanvas.height = 128;
@@ -1195,7 +1210,6 @@
       nCtx.fillRect(0, 0, 128, 128);
       nCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       nCtx.lineWidth = 3;
-      // Maglia esagonale / quadrata intrecciata
       nCtx.strokeRect(0, 0, 128, 128);
       nCtx.beginPath();
       nCtx.moveTo(0, 64); nCtx.lineTo(128, 64);
@@ -1205,59 +1219,58 @@
       const netTexture = new THREE.CanvasTexture(netCanvas);
       netTexture.wrapS = THREE.RepeatWrapping;
       netTexture.wrapT = THREE.RepeatWrapping;
-      netTexture.repeat.set(18, 8);
+      netTexture.repeat.set(16, 8);
 
-      const realisticNetMat = new THREE.MeshStandardMaterial({
+      const netMat = new THREE.MeshStandardMaterial({
         map: netTexture,
         transparent: true,
-        opacity: 0.65,
+        opacity: 0.68,
         roughness: 0.9,
         side: THREE.DoubleSide,
         depthWrite: false
       });
 
-      // Creazione pannelli rete: Tetto superiore, Fondo inclinato, Pareti laterali
-      // A) Tetto della rete
-      const netRoofGeo = new THREE.PlaneGeometry(GOAL_WIDTH, GOAL_DEPTH_TOP);
-      const netRoof = new THREE.Mesh(netRoofGeo, realisticNetMat);
-      netRoof.rotation.x = Math.PI / 2;
-      netRoof.position.set(0, GOAL_HEIGHT, depthSign * (GOAL_DEPTH_TOP / 2));
-      goalGroup.add(netRoof);
+      // Costruzione Geometria Rete 3D perfetta con BufferGeometry
+      const P1 = [-W2, H, 0];
+      const P2 = [ W2, H, 0];
+      const P3 = [ W2, H, D_top];
+      const P4 = [-W2, H, D_top];
+      const P5 = [-W2, 0, 0];
+      const P6 = [ W2, 0, 0];
+      const P7 = [ W2, 0, D_bot];
+      const P8 = [-W2, 0, D_bot];
 
-      // B) Fondo inclinato della rete (da quota 2.44 a quota 0)
-      const slopeDepth = GOAL_DEPTH_BOTTOM - GOAL_DEPTH_TOP;
-      const slopeLength = Math.sqrt(GOAL_HEIGHT * GOAL_HEIGHT + slopeDepth * slopeDepth);
-      const slopeAngle = Math.atan2(GOAL_HEIGHT, slopeDepth);
+      const vertices = [];
+      const uvs = [];
 
-      const netBackGeo = new THREE.PlaneGeometry(GOAL_WIDTH, slopeLength);
-      const netBack = new THREE.Mesh(netBackGeo, realisticNetMat);
-      netBack.rotation.x = depthSign * (Math.PI / 2 - slopeAngle);
-      netBack.position.set(0, GOAL_HEIGHT / 2, depthSign * (GOAL_DEPTH_TOP + slopeDepth / 2));
-      goalGroup.add(netBack);
+      function addQuad(A, B, C, D, uMax = 1, vMax = 1) {
+        vertices.push(...A, ...B, ...C);
+        uvs.push(0, 0,  uMax, 0,  uMax, vMax);
 
-      // C) Pareti laterali a profilo trapezoidale
-      const sideShape = new THREE.Shape();
-      sideShape.moveTo(0, 0);
-      sideShape.lineTo(0, GOAL_HEIGHT);
-      sideShape.lineTo(depthSign * GOAL_DEPTH_TOP, GOAL_HEIGHT);
-      sideShape.lineTo(depthSign * GOAL_DEPTH_BOTTOM, 0);
-      sideShape.closePath();
+        vertices.push(...A, ...C, ...D);
+        uvs.push(0, 0,  uMax, vMax,  0, vMax);
+      }
 
-      const sideGeo = new THREE.ShapeGeometry(sideShape);
-      const netSideLeft = new THREE.Mesh(sideGeo, realisticNetMat);
-      netSideLeft.rotation.y = Math.PI / 2;
-      netSideLeft.position.set(-GOAL_WIDTH / 2, 0, 0);
-      goalGroup.add(netSideLeft);
+      // Tetto della rete
+      addQuad(P1, P2, P3, P4, 6, 2);
+      // Fondo inclinato della rete
+      addQuad(P4, P3, P7, P8, 6, 4);
+      // Fianco Sinistro
+      addQuad(P5, P1, P4, P8, 2, 4);
+      // Fianco Destro
+      addQuad(P6, P7, P3, P2, 2, 4);
 
-      const netSideRight = new THREE.Mesh(sideGeo, realisticNetMat);
-      netSideRight.rotation.y = Math.PI / 2;
-      netSideRight.position.set(GOAL_WIDTH / 2, 0, 0);
-      goalGroup.add(netSideRight);
+      const netGeo = new THREE.BufferGeometry();
+      netGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      netGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      netGeo.computeVertexNormals();
+
+      const netMesh = new THREE.Mesh(netGeo, netMat);
+      goalGroup.add(netMesh);
 
       goalGroup.position.set(0, 0, zPos);
       scene.add(goalGroup);
 
-      // Registrazione per collisioni palla con i pali
       goalColliders.push({
         type: 'post',
         pos: new THREE.Vector3(-GOAL_WIDTH / 2, GOAL_HEIGHT / 2, zPos),
@@ -1278,8 +1291,8 @@
       });
     }
 
-    createRealisticGoalNet(-FIELD_LENGTH / 2, true);  // Porta Nord
-    createRealisticGoalNet( FIELD_LENGTH / 2, false); // Porta Sud
+    createRealisticGoalNet(-FIELD_LENGTH / 2, true);
+    createRealisticGoalNet( FIELD_LENGTH / 2, false);
 
     // --- 9. PALLONE DA CALCIO ---
     function createDetailedBallTexture() {
@@ -1345,11 +1358,9 @@
       radius: BALL_RADIUS,
       restitution: 0.72,
       friction: 0.985,
-      isPossessed: false, // Flag di possesso / close control
       reset: function() {
         this.pos.set(0, BALL_RADIUS + 0.1, 0);
         this.vel.set(0, 0, 0);
-        this.isPossessed = false;
       }
     };
     ball.reset();
@@ -1358,86 +1369,89 @@
     const player = {
       pos: new THREE.Vector3(0, PLAYER_HEIGHT, 12),
       vel: new THREE.Vector3(0, 0, 0),
+      slideVel: new THREE.Vector3(0, 0, 0),
       yaw: 0,
       pitch: 0,
       baseHeight: PLAYER_HEIGHT,
-      currentHeight: PLAYER_HEIGHT,
+      eyeHeight: PLAYER_HEIGHT,
       speed: 8.5,
       sprintMultiplier: 1.65,
       jumpSpeed: 7.2,
       isGrounded: true,
       radius: PLAYER_RADIUS,
-      // Meccaniche speciali
       isSliding: false,
+      slideDuration: 0.65,
       slideTimer: 0,
       isTackling: false,
       tackleTimer: 0
     };
 
-    // --- 11. SISTEMA DI INPUT TASTIERA & MOUSE ---
+    // --- 11. SISTEMA DI INPUT ATTIVO ---
     const activeKeys = {};
+    const activeMouseButtons = {};
+    const gamepadButtonStates = {};
     let isPointerLocked = false;
     let gameStarted = false;
     let kickCharging = false;
     let kickPower = 0; // 0..100
 
-    // Riconoscimento tasti personalizzati
-    function isActionActive(actionName) {
-      const binding = userBindings[actionName];
-      if (!binding) return false;
-      return !!activeKeys[binding.key];
+    function isBindingPressed(actionKey) {
+      const b = userBindings[actionKey];
+      if (!b) return false;
+      if (b.type === 'keyboard') {
+        return !!activeKeys[b.code];
+      } else if (b.type === 'mouse') {
+        return !!activeMouseButtons[b.code];
+      } else if (b.type === 'gamepad') {
+        return !!gamepadButtonStates[b.code];
+      }
+      return false;
     }
 
     window.addEventListener('keydown', (e) => {
       activeKeys[e.code] = true;
 
-      // Reset palla
-      if (isActionActive('reset')) {
+      if (isBindingPressed('reset')) {
         ball.reset();
         showToast('Palla Riposizionata!');
       }
 
-      // Scivolata
-      if (isActionActive('slide') && !player.isSliding && player.isGrounded) {
+      if (isBindingPressed('slide') && !player.isSliding && player.isGrounded) {
         performSlide();
       }
 
-      // Contrasto
-      if (isActionActive('tackle') && !player.isTackling) {
+      if (isBindingPressed('tackle') && !player.isTackling) {
         performTackle();
       }
 
-      // Inizio carica tiro da tastiera
-      if (isActionActive('shoot') && !kickCharging) {
+      if (isBindingPressed('shoot') && !kickCharging) {
         startChargingKick();
       }
     });
 
     window.addEventListener('keyup', (e) => {
-      if (isActionActive('shoot') && kickCharging) {
+      if (isBindingPressed('shoot') && kickCharging) {
         releaseKick();
       }
       activeKeys[e.code] = false;
     });
 
     window.addEventListener('mousedown', (e) => {
-      const mouseKey = 'Mouse' + e.button;
-      activeKeys[mouseKey] = true;
+      activeMouseButtons[e.button] = true;
 
-      if (isActionActive('shoot') && isPointerLocked && !kickCharging) {
+      if (isBindingPressed('shoot') && isPointerLocked && !kickCharging) {
         startChargingKick();
       }
-      if (isActionActive('tackle') && isPointerLocked && !player.isTackling) {
+      if (isBindingPressed('tackle') && isPointerLocked && !player.isTackling) {
         performTackle();
       }
     });
 
     window.addEventListener('mouseup', (e) => {
-      const mouseKey = 'Mouse' + e.button;
-      if (isActionActive('shoot') && kickCharging) {
+      if (isBindingPressed('shoot') && kickCharging) {
         releaseKick();
       }
-      activeKeys[mouseKey] = false;
+      activeMouseButtons[e.button] = false;
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -1445,10 +1459,11 @@
       const sensitivity = 0.0022;
       player.yaw -= e.movementX * sensitivity;
       player.pitch -= e.movementY * sensitivity;
-      player.pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, player.pitch));
+      // Limite verticale naturale della testa
+      player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
     });
 
-    // --- 12. GESTIONE OVERLAY E POINTER LOCK ---
+    // --- 12. GESTIONE OVERLAY E AVVIO ---
     const overlay = document.getElementById('overlay');
     const startBtn = document.getElementById('start-button');
 
@@ -1481,18 +1496,18 @@
       }
     });
 
-    // --- 13. MECCANICA DI TIRO CON MIRINO DINAMICO ---
+    // --- 13. TIRO CON MIRINO PERFETTAMENTE ALLINEATO E TRAIETTORIA REALE ---
     const aimReticle = document.getElementById('aim-reticle');
     const powerMeterBox = document.getElementById('power-meter-box');
     const powerBar = document.getElementById('power-bar');
 
     function startChargingKick() {
       const dist = player.pos.distanceTo(ball.pos);
-      if (dist < 4.5 || ball.isPossessed) {
+      if (dist < 4.5) {
         kickCharging = true;
         kickPower = 15;
         powerMeterBox.style.display = 'block';
-        aimReticle.style.display = 'block'; // Mostra mirino dinamico di tiro
+        aimReticle.style.display = 'block';
       }
     }
 
@@ -1503,31 +1518,31 @@
       aimReticle.style.display = 'none';
 
       const dist = player.pos.distanceTo(ball.pos);
-      if (dist < 4.8 || ball.isPossessed) {
+      if (dist < 4.8) {
         shootBall(kickPower / 100);
       }
       kickPower = 0;
       powerBar.style.width = '0%';
     }
 
-    function shootBall(powerNorm, isLob = false) {
-      ball.isPossessed = false; // Rilascia possesso
+    function shootBall(powerNorm) {
+      // Direzione esatta in cui sta guardando la telecamera (centro mirino)
+      const aimDir = new THREE.Vector3();
+      camera.getWorldDirection(aimDir);
 
-      // Vettore esatto verso il mirino
-      const forward = new THREE.Vector3(0, 0, -1);
-      forward.applyEuler(new THREE.Euler(player.pitch, player.yaw, 0, 'YXZ')).normalize();
+      // Spinta base scalata sulla potenza
+      const baseSpeed = 16 + powerNorm * 26; // Da 16 a 42 m/s
 
-      // Traiettoria precisa con effetto e altezza
-      const loftAngle = isLob ? 0.65 : Math.max(0.12, forward.y + 0.16);
-      const impulse = new THREE.Vector3(forward.x, loftAngle, forward.z).normalize();
+      // Proietta il tiro esattamente verso il mirino, compensando l'altezza
+      // In questo modo, se miri alla traversa o all'incrocio, la palla si alza realmente verso il punto mirato!
+      const verticalBoost = Math.max(0.15, aimDir.y * 1.35 + 0.18);
+      const shotVector = new THREE.Vector3(aimDir.x, verticalBoost, aimDir.z).normalize();
 
-      const speed = (isLob ? 19 : 32) * Math.max(0.4, powerNorm);
-      ball.vel.copy(impulse.multiplyScalar(speed));
-
+      ball.vel.copy(shotVector.multiplyScalar(baseSpeed));
       sounds.playKick(powerNorm);
     }
 
-    // --- 14. MECCANICHE DI SCIVOLATA E CONTRASTO ---
+    // --- 14. SCIVOLATA E CONTRASTO FLUIDI E CORRETTI ---
     const actionToast = document.getElementById('action-toast');
     let toastTimeout = null;
 
@@ -1540,38 +1555,35 @@
 
     function performSlide() {
       player.isSliding = true;
-      player.slideTimer = 0.65;
+      player.slideTimer = player.slideDuration;
       sounds.playSlide();
 
-      // Slancio in avanti e telecamera bassa
+      // Calcola direzione frontale per lo slancio della scivolata
       const forward = new THREE.Vector3(0, 0, -1);
       forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
-      player.vel.addScaledVector(forward, 15.0);
+      player.slideVel.copy(forward.multiplyScalar(15.5));
 
-      // Se la palla è entro 3.2m in avanti, intercetta e prendi il possesso!
+      // Se la palla è entro 3.2m in avanti e a terra, intercetta e fermala
       const dist = player.pos.distanceTo(ball.pos);
-      if (dist < 3.2) {
+      if (dist < 3.2 && ball.pos.y < 0.8) {
         ball.vel.set(0, 0, 0);
-        ball.isPossessed = true;
-        showToast('🎯 Scivolata Riuscita! Palla Recuperata');
+        showToast('🎯 Scivolata Riuscita! Palla Fermata');
       }
     }
 
     function performTackle() {
       player.isTackling = true;
-      player.tackleTimer = 0.35;
+      player.tackleTimer = 0.3;
       sounds.playTackle();
 
-      // Contrasto in piedi (Tackle di gamba)
       const dist = player.pos.distanceTo(ball.pos);
-      if (dist < 2.2) {
+      if (dist < 2.2 && ball.pos.y < 0.8) {
         ball.vel.set(0, 0, 0);
-        ball.isPossessed = true;
-        showToast('🛡️ Contrasto Vinto! Palla ai Piedi');
+        showToast('🛡️ Contrasto Vinto!');
       }
     }
 
-    // --- 15. SUPPORTO CONTROLLER XBOX & PLAYSTATION ---
+    // --- 15. GESTIONE CONTROLLER XBOX & PLAYSTATION ---
     let activeGamepadIndex = null;
     let prevGpButtons = {};
     const gamepadStatusElem = document.getElementById('gamepad-status');
@@ -1614,7 +1626,29 @@
 
       if (!gp) return null;
 
-      // Avvia gioco al primo tocco controller
+      // Aggiorna lo stato globale dei pulsanti del gamepad per il sistema comandi
+      for (let i = 0; i < gp.buttons.length; i++) {
+        const isPressed = gp.buttons[i] && (gp.buttons[i].pressed || gp.buttons[i].value > 0.5);
+        gamepadButtonStates[i] = isPressed;
+
+        // Se un'azione è associata a questo pulsante gamepad ed è appena stata premuta
+        if (isPressed && !prevGpButtons[i]) {
+          if (userBindings.reset && userBindings.reset.type === 'gamepad' && userBindings.reset.code === i) {
+            ball.reset();
+            showToast('Palla Riposizionata!');
+          }
+          if (userBindings.slide && userBindings.slide.type === 'gamepad' && userBindings.slide.code === i && !player.isSliding && player.isGrounded) {
+            performSlide();
+          }
+          if (userBindings.tackle && userBindings.tackle.type === 'gamepad' && userBindings.tackle.code === i && !player.isTackling) {
+            performTackle();
+          }
+        }
+
+        prevGpButtons[i] = isPressed;
+      }
+
+      // Avvia gioco con un qualsiasi tasto se overlay è visibile
       const anyPressed = gp.buttons.some(b => b && (b.pressed || b.value > 0.5));
       if (!gameStarted && anyPressed && !isSettingsOpen) {
         sounds.init();
@@ -1622,6 +1656,7 @@
         overlay.classList.add('hidden');
       }
 
+      // Stick analogici
       const deadzone = 0.15;
       const applyDeadzone = (v) => Math.abs(v) > deadzone ? v : 0;
 
@@ -1633,46 +1668,26 @@
       const lookSpeed = 2.4 * delta;
       player.yaw -= lookX * lookSpeed;
       player.pitch -= lookY * lookSpeed;
-      player.pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, player.pitch));
+      player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
 
-      const isP = (i) => gp.buttons[i] && (gp.buttons[i].pressed || gp.buttons[i].value > 0.5);
-      const justP = (i) => isP(i) && !prevGpButtons[i];
+      // Controlla se il tiro da gamepad è premuto/rilasciato
+      const shootPressed = isBindingPressed('shoot') || gp.buttons[2]?.pressed || gp.buttons[7]?.pressed;
+      if (shootPressed && !kickCharging) {
+        startChargingKick();
+      } else if (!shootPressed && kickCharging && (userBindings.shoot.type === 'gamepad' || !activeMouseButtons[0])) {
+        releaseKick();
+      }
 
-      // Salto (A / Croce)
-      if (isP(0) && player.isGrounded && !player.isSliding) {
+      // Salto predefinito su A/Cross se non rimappato
+      if (gp.buttons[0]?.pressed && player.isGrounded && !player.isSliding) {
         player.vel.y = player.jumpSpeed;
         player.isGrounded = false;
-      }
-
-      // Tiro (Quadrato / X o Grilletto RT/R2)
-      const shootBtn = isP(2) || isP(7);
-      if (shootBtn && !kickCharging) startChargingKick();
-      else if (!shootBtn && kickCharging) releaseKick();
-
-      // Scivolata (Cerchio / B)
-      if (justP(1) && !player.isSliding && player.isGrounded) {
-        performSlide();
-      }
-
-      // Contrasto (Dorsale L1 o Tasto X)
-      if (justP(4) && !player.isTackling) {
-        performTackle();
-      }
-
-      // Reset Palla (Y / Triangolo o Select/Start)
-      if (justP(3) || justP(9)) {
-        ball.reset();
-        showToast('Palla Riposizionata!');
-      }
-
-      for (let i = 0; i < gp.buttons.length; i++) {
-        prevGpButtons[i] = isP(i);
       }
 
       return {
         moveX,
         moveZ,
-        isSprinting: isP(5) || isP(6) // RB o RT
+        isSprinting: (userBindings.sprint.type === 'gamepad' && isBindingPressed('sprint')) || gp.buttons[5]?.pressed || gp.buttons[6]?.pressed
       };
     }
 
@@ -1705,7 +1720,7 @@
       }
     }
 
-    // --- 17. FISICA COMPLETA & AGGIORNAMENTO AMBIENTE ---
+    // --- 17. FISICA COMPLETA & MOVIMENTO ---
     const clock = new THREE.Clock();
     const crosshairElem = document.getElementById('crosshair');
 
@@ -1714,64 +1729,71 @@
 
       // Movimento Giocatore
       let moveDir = new THREE.Vector3();
-      if (isActionActive('forward')) moveDir.z -= 1;
-      if (isActionActive('backward')) moveDir.z += 1;
-      if (isActionActive('left')) moveDir.x -= 1;
-      if (isActionActive('right')) moveDir.x += 1;
+      if (isBindingPressed('forward')) moveDir.z -= 1;
+      if (isBindingPressed('backward')) moveDir.z += 1;
+      if (isBindingPressed('left')) moveDir.x -= 1;
+      if (isBindingPressed('right')) moveDir.x += 1;
 
       if (gp) {
         moveDir.x += gp.moveX;
         moveDir.z += gp.moveZ;
       }
 
-      const isSprinting = isActionActive('sprint') || (gp && gp.isSprinting);
+      const isSprinting = isBindingPressed('sprint') || (gp && gp.isSprinting);
 
-      // Gestione scivolata
+      // Gestione scivolata fluida (no scatti)
       if (player.isSliding) {
         player.slideTimer -= delta;
-        player.currentHeight = THREE.MathUtils.lerp(player.currentHeight, 0.8, 0.2); // si abbassa
+        // Altezza visuale scende gradualmente a 1.15m (naturale e non schiacciata)
+        player.eyeHeight = THREE.MathUtils.lerp(player.eyeHeight, 1.15, 0.15);
+
+        // Movimento in scivolata con decelerazione frizione
+        player.pos.addScaledVector(player.slideVel, delta);
+        player.slideVel.multiplyScalar(0.96);
+
         if (player.slideTimer <= 0) {
           player.isSliding = false;
         }
       } else {
-        player.currentHeight = THREE.MathUtils.lerp(player.currentHeight, player.baseHeight, 0.15);
-      }
+        // Torna dolcemente all'altezza normale
+        player.eyeHeight = THREE.MathUtils.lerp(player.eyeHeight, player.baseHeight, 0.15);
 
-      if (moveDir.lengthSq() > 0 && !player.isSliding) {
-        moveDir.normalize();
-        moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
+        if (moveDir.lengthSq() > 0) {
+          moveDir.normalize();
+          moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
 
-        const curSpeed = player.speed * (isSprinting ? player.sprintMultiplier : 1.0);
-        player.pos.x += moveDir.x * curSpeed * delta;
-        player.pos.z += moveDir.z * curSpeed * delta;
+          const curSpeed = player.speed * (isSprinting ? player.sprintMultiplier : 1.0);
+          player.pos.x += moveDir.x * curSpeed * delta;
+          player.pos.z += moveDir.z * curSpeed * delta;
+        }
       }
 
       // Salto
-      if (isActionActive('jump') && player.isGrounded && !player.isSliding) {
+      if (isBindingPressed('jump') && player.isGrounded && !player.isSliding) {
         player.vel.y = player.jumpSpeed;
         player.isGrounded = false;
       }
 
-      // Gravità e altezza
+      // Gravità del giocatore
       if (!player.isGrounded) {
         player.vel.y -= 22 * delta;
         player.pos.y += player.vel.y * delta;
-        if (player.pos.y <= player.currentHeight) {
-          player.pos.y = player.currentHeight;
+        if (player.pos.y <= player.eyeHeight) {
+          player.pos.y = player.eyeHeight;
           player.vel.y = 0;
           player.isGrounded = true;
         }
       } else {
-        player.pos.y = player.currentHeight;
+        player.pos.y = player.eyeHeight;
       }
 
-      // Confini perimetro giocatore
+      // Limiti campo per il giocatore
       const limitX = FIELD_WIDTH / 2 + 2;
       const limitZ = FIELD_LENGTH / 2 + 3;
       player.pos.x = Math.max(-limitX, Math.min(limitX, player.pos.x));
       player.pos.z = Math.max(-limitZ, Math.min(limitZ, player.pos.z));
 
-      // Telecamera con zoom dinamico durante il caricamento del tiro
+      // Telecamera
       const targetFOV = kickCharging ? 66 : 75;
       camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, 0.1);
       camera.updateProjectionMatrix();
@@ -1782,66 +1804,61 @@
       camera.rotation.y = player.yaw;
       camera.rotation.x = player.pitch;
 
-      // Caricamento tiro
+      // Carica tiro
       if (kickCharging) {
         kickPower = Math.min(100, kickPower + 140 * delta);
         powerBar.style.width = kickPower + '%';
       }
 
-      // --- FISICA PALLONE & CONTROLLO INCOLLATO AI PIEDI (CLOSE CONTROL) ---
-      const toBall = new THREE.Vector3().subVectors(ball.pos, player.pos);
-      toBall.y = 0;
-      const distToPlayer = toBall.length();
+      // --- FISICA PALLONE LIBERA CON TOCCO MORBIDO (NO DESPAWN, NO INCOLLATA) ---
+      // Gravità standard sulla palla
+      ball.vel.y -= 18.0 * delta;
+      ball.pos.addScaledVector(ball.vel, delta);
 
-      // Rilevamento automatico possesso palla
-      if (distToPlayer < 1.4 && !kickCharging) {
-        ball.isPossessed = true;
-      } else if (distToPlayer > 3.0) {
-        ball.isPossessed = false;
+      // Terreno
+      if (ball.pos.y <= ball.radius) {
+        ball.pos.y = ball.radius;
+        if (Math.abs(ball.vel.y) > 0.8) {
+          ball.vel.y = -ball.vel.y * ball.restitution;
+        } else {
+          ball.vel.y = 0;
+        }
+        ball.vel.x *= ball.friction;
+        ball.vel.z *= ball.friction;
       }
 
-      if (ball.isPossessed && !kickCharging) {
-        // La palla resta morbidamente incollata davanti ai piedi del giocatore
-        const forward = new THREE.Vector3(0, 0, -1);
-        forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
+      ball.vel.multiplyScalar(0.998); // Attrito aria
 
-        const dribbleDist = isSprinting ? 1.15 : 0.75;
-        const targetBallX = player.pos.x + forward.x * dribbleDist;
-        const targetBallZ = player.pos.z + forward.z * dribbleDist;
+      // Controllo conduzione palla morbida e gestibile:
+      // SOLTANTO se la palla è A TERRA (pos.y < 0.6) e vicina ai piedi!
+      // In questo modo, se la palla va in alto NON viene mai toccata o resettata!
+      const toBall = new THREE.Vector3().subVectors(ball.pos, player.pos);
+      toBall.y = 0;
+      const distHoriz = toBall.length();
 
-        // Attrazione fluida
-        ball.pos.x = THREE.MathUtils.lerp(ball.pos.x, targetBallX, 0.45);
-        ball.pos.z = THREE.MathUtils.lerp(ball.pos.z, targetBallZ, 0.45);
-        ball.pos.y = ball.radius;
-        ball.vel.set(0, 0, 0);
-      } else {
-        // Movimento balistico libero
-        ball.vel.y -= 18.0 * delta;
-        ball.pos.addScaledVector(ball.vel, delta);
+      const isBallOnGround = ball.pos.y < 0.65;
+      const touchRadius = player.radius + ball.radius + 0.35; // Raggio di controllo ai piedi
 
-        // Terreno
-        if (ball.pos.y <= ball.radius) {
-          ball.pos.y = ball.radius;
-          if (Math.abs(ball.vel.y) > 0.8) {
-            ball.vel.y = -ball.vel.y * ball.restitution;
-          } else {
-            ball.vel.y = 0;
-          }
-          ball.vel.x *= ball.friction;
-          ball.vel.z *= ball.friction;
+      if (distHoriz < touchRadius && isBallOnGround && !kickCharging) {
+        // Tocco naturale: invece di incollarsi, la palla riceve una spinta morbida nella direzione di marcia del giocatore
+        toBall.normalize();
+
+        // Se il giocatore si muove verso la palla, accompagnala dolcemente
+        if (moveDir.lengthSq() > 0) {
+          const moveSpeed = isSprinting ? 9.5 : 6.0;
+          ball.vel.x = THREE.MathUtils.lerp(ball.vel.x, moveDir.x * moveSpeed, 0.25);
+          ball.vel.z = THREE.MathUtils.lerp(ball.vel.z, moveDir.z * moveSpeed, 0.25);
+        } else {
+          // Se il giocatore è fermo, rallenta dolcemente la palla senza incollarla
+          ball.vel.x *= 0.92;
+          ball.vel.z *= 0.92;
         }
 
-        // Attrito aria
-        ball.vel.multiplyScalar(0.998);
-
-        // Spinta fisica al contatto se non in possesso
-        const minD = player.radius + ball.radius;
-        if (distToPlayer < minD) {
-          toBall.normalize();
-          ball.pos.x = player.pos.x + toBall.x * minD;
-          ball.pos.z = player.pos.z + toBall.z * minD;
-          ball.vel.x += toBall.x * 4.5;
-          ball.vel.z += toBall.z * 4.5;
+        // Evita che il giocatore compenetri la palla
+        const minDistance = player.radius + ball.radius;
+        if (distHoriz < minDistance) {
+          ball.pos.x = player.pos.x + toBall.x * minDistance;
+          ball.pos.z = player.pos.z + toBall.z * minDistance;
         }
       }
 
@@ -1894,16 +1911,16 @@
         ball.vel.z = -ball.vel.z * 0.6;
       }
 
-      // Rotazione della palla
+      // Rotazione della palla nel senso opposto
       const bSpeed = Math.sqrt(ball.vel.x * ball.vel.x + ball.vel.z * ball.vel.z);
       if (bSpeed > 0.05) {
-        const axis = new THREE.Vector3(-ball.vel.z, 0, ball.vel.x).normalize();
+        const axis = new THREE.Vector3(ball.vel.z, 0, -ball.vel.x).normalize();
         ballMesh.rotateOnWorldAxis(axis, (bSpeed * delta) / ball.radius);
       }
       ballMesh.position.copy(ball.pos);
 
-      // Mirino feedback
-      if (distToPlayer < 3.8 || ball.isPossessed) {
+      // Feedback visivo mirino
+      if (distHoriz < 3.8 && isBallOnGround) {
         crosshairElem.classList.add('ball-near');
       } else {
         crosshairElem.classList.remove('ball-near');
@@ -1912,7 +1929,7 @@
       checkGoal();
     }
 
-    // --- 18. INTERFACCIA MENU PERSONALIZZAZIONE COMANDI ---
+    // --- 18. INTERFACCIA MENU PERSONALIZZAZIONE COMANDI (CON SUPPORTO CONTROLLER) ---
     const settingsModal = document.getElementById('settings-modal');
     const controlsListElem = document.getElementById('controls-list');
     const openSettingsBtn = document.getElementById('open-settings-btn');
@@ -1941,24 +1958,54 @@
         btn.onclick = () => {
           if (waitingActionKey) return;
           waitingActionKey = actionKey;
-          btn.textContent = 'Premi un tasto...';
+          btn.textContent = 'Premi un tasto o pulsante...';
           btn.classList.add('waiting');
 
           const keyListener = (e) => {
             e.preventDefault();
-            userBindings[actionKey].key = e.code;
-            userBindings[actionKey].display = e.key.toUpperCase();
+            userBindings[actionKey] = {
+              label: item.label,
+              type: 'keyboard',
+              code: e.code,
+              display: e.key.toUpperCase()
+            };
             cleanup();
           };
 
           const mouseListener = (e) => {
             e.preventDefault();
-            userBindings[actionKey].key = 'Mouse' + e.button;
-            userBindings[actionKey].display = 'Mouse ' + (e.button === 0 ? 'SX' : e.button === 2 ? 'DX' : 'Centro');
+            userBindings[actionKey] = {
+              label: item.label,
+              type: 'mouse',
+              code: e.button,
+              display: 'Mouse ' + (e.button === 0 ? 'SX' : e.button === 2 ? 'DX' : 'Centro')
+            };
             cleanup();
           };
 
+          // Polling continuo per rilevare pulsanti e grilletti del Controller
+          let gpPollInterval = setInterval(() => {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            for (let g = 0; g < gamepads.length; g++) {
+              const gp = gamepads[g];
+              if (!gp) continue;
+              for (let b = 0; b < gp.buttons.length; b++) {
+                if (gp.buttons[b] && (gp.buttons[b].pressed || gp.buttons[b].value > 0.5)) {
+                  userBindings[actionKey] = {
+                    label: item.label,
+                    type: 'gamepad',
+                    code: b,
+                    display: GAMEPAD_BUTTON_NAMES[b] || ('🎮 Pulsante ' + b)
+                  };
+                  cleanup();
+                  return;
+                }
+              }
+            }
+          }, 50);
+
           function cleanup() {
+            clearInterval(gpPollInterval);
             window.removeEventListener('keydown', keyListener);
             window.removeEventListener('mousedown', mouseListener);
             waitingActionKey = null;
@@ -1999,7 +2046,6 @@
       renderControlsList();
     });
 
-    // Tasto rapido P per aprire le impostazioni
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyP') {
         if (isSettingsOpen) closeSettings();
@@ -2016,7 +2062,6 @@
     }
     animate();
 
-    // Resize
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
