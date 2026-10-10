@@ -492,6 +492,42 @@
       justify-content: space-between;
       gap: 12px;
     }
+    .settings-section-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #00f0ff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 18px 0 10px 0;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .toggle-setting-btn {
+      background: rgba(0, 255, 136, 0.18);
+      border: 1px solid #00ff88;
+      color: #00ff88;
+      padding: 7px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      min-width: 130px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .toggle-setting-btn:hover {
+      background: rgba(0, 255, 136, 0.3);
+      box-shadow: 0 0 14px rgba(0, 255, 136, 0.4);
+    }
+    .toggle-setting-btn.disabled {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+      color: #f87171;
+    }
+    .toggle-setting-btn.disabled:hover {
+      background: rgba(239, 68, 68, 0.25);
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+    }
 
     /* GOAL ANNOUNCEMENT BANNER */
     #goal-banner {
@@ -591,6 +627,16 @@
       
       <div class="controls-list" id="controls-list">
         <!-- Generato dinamicamente da JS -->
+      </div>
+
+      <!-- SEZIONE OPZIONI GRAFICHE & NOTIFICHE A SCHERMO -->
+      <div class="settings-section-title">Opzioni Schermo & Partita</div>
+      <div class="control-row" style="margin-bottom: 22px;">
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <span class="control-label">Mostra Scritte e Notifiche in Campo</span>
+          <span style="font-size: 11px; color: #94a3b8;">Attiva o disattiva i testi a schermo (Scivolata, Contrasto, Palla)</span>
+        </div>
+        <button class="toggle-setting-btn" id="toggle-toasts-btn">ATTIVO</button>
       </div>
 
       <div class="settings-footer">
@@ -714,17 +760,117 @@
       playPostHit() {
         if (!this.ctx) return;
         const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
+        if (this._lastPostHit && (now - this._lastPostHit) < 0.12) return;
+        this._lastPostHit = now;
+
+        // 1. Transiente percussivo del pallone di cuoio sul metallo
+        const thudOsc = this.ctx.createOscillator();
+        const thudGain = this.ctx.createGain();
+        thudOsc.type = 'triangle';
+        thudOsc.frequency.setValueAtTime(170, now);
+        thudOsc.frequency.exponentialRampToValueAtTime(38, now + 0.08);
+        thudGain.gain.setValueAtTime(0.7, now);
+        thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        thudOsc.connect(thudGain);
+        thudGain.connect(this.ctx.destination);
+        thudOsc.start(now);
+        thudOsc.stop(now + 0.09);
+
+        // 2. Crack / snap metallico secco immediato (rumore passa-banda)
+        const snapLen = Math.floor(this.ctx.sampleRate * 0.045);
+        const snapBuf = this.ctx.createBuffer(1, snapLen, this.ctx.sampleRate);
+        const snapData = snapBuf.getChannelData(0);
+        for (let i = 0; i < snapLen; i++) snapData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (snapLen * 0.25));
+        const snapSrc = this.ctx.createBufferSource();
+        snapSrc.buffer = snapBuf;
+        const snapFilter = this.ctx.createBiquadFilter();
+        snapFilter.type = 'bandpass';
+        snapFilter.frequency.setValueAtTime(2400, now);
+        snapFilter.Q.setValueAtTime(3.2, now);
+        const snapGain = this.ctx.createGain();
+        snapGain.gain.setValueAtTime(0.5, now);
+        snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+        snapSrc.connect(snapFilter);
+        snapFilter.connect(snapGain);
+        snapGain.connect(this.ctx.destination);
+        snapSrc.start(now);
+        snapSrc.stop(now + 0.045);
+
+        // 3. Risonanza tubolare metallica tipica del palo in alluminio/acciaio cavo
+        const modes = [
+          { freq: 485, gain: 0.70, decay: 0.80 },  // Frequenza fondamentale del corpo tubolare
+          { freq: 890, gain: 0.48, decay: 0.58 },  // Modo metallico secondario "KLANG"
+          { freq: 1680, gain: 0.36, decay: 0.38 }, // Squillo metallico alto
+          { freq: 2820, gain: 0.22, decay: 0.20 }  // Brillanza e risonanza d'aria
+        ];
+
+        modes.forEach(m => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(m.freq, now);
+          osc.frequency.exponentialRampToValueAtTime(m.freq * 0.992, now + m.decay);
+
+          gain.gain.setValueAtTime(m.gain, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + m.decay);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + m.decay);
+        });
+      }
+      playNetHit() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        if (this._lastNetHit && (now - this._lastNetHit) < 0.15) return;
+        this._lastNetHit = now;
+
+        // 1. Rumore di fruscio e vibrazione delle maglie tese in nylon
+        const netDur = 0.52;
+        const bufSize = Math.floor(this.ctx.sampleRate * netDur);
+        const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) {
+          const t = i / this.ctx.sampleRate;
+          // Vibrazione naturale delle corde a ~22Hz
+          const flutter = 1.0 + 0.38 * Math.sin(2 * Math.PI * 22 * t);
+          data[i] = (Math.random() * 2 - 1) * flutter;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buf;
+
+        // Filtro passa-banda dinamico che scende di frequenza mentre la rete si distende e ammortizza
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1450, now);
+        filter.frequency.exponentialRampToValueAtTime(440, now + netDur);
+        filter.Q.setValueAtTime(2.2, now);
+
         const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1250, now);
-        osc.frequency.exponentialRampToValueAtTime(550, now + 0.4);
-        gain.gain.setValueAtTime(0.8, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-        osc.connect(gain);
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.7, now + 0.025); // Attacco rapido e morbido dello swish
+        gain.gain.exponentialRampToValueAtTime(0.001, now + netDur);
+
+        noise.connect(filter);
+        filter.connect(gain);
         gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.4);
+        noise.start(now);
+        noise.stop(now + netDur);
+
+        // 2. Colpo sordo dell'inerzia del pallone assorbita dalla rete
+        const thudOsc = this.ctx.createOscillator();
+        const thudGain = this.ctx.createGain();
+        thudOsc.type = 'sine';
+        thudOsc.frequency.setValueAtTime(95, now);
+        thudOsc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+        thudGain.gain.setValueAtTime(0.42, now);
+        thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        thudOsc.connect(thudGain);
+        thudGain.connect(this.ctx.destination);
+        thudOsc.start(now);
+        thudOsc.stop(now + 0.15);
       }
       playGoalCheer() {
         if (!this.ctx) return;
@@ -995,7 +1141,7 @@
     }
     createLEDAdBoards();
 
-    // Helper per fondere BufferGeometry senza dipendenze esterne
+    // Helper per fondere BufferGeometry senza dipendenze esterne (con supporto UV e normali)
     function mergeGeometries(geos) {
       let totalPos = 0;
       geos.forEach(g => {
@@ -1004,67 +1150,177 @@
       });
       const posArray = new Float32Array(totalPos);
       const normArray = new Float32Array(totalPos);
-      let offset = 0;
+      const uvArray = new Float32Array((totalPos / 3) * 2);
+
+      let posOffset = 0;
+      let uvOffset = 0;
       geos.forEach(g => {
         const nonIndexed = g.index ? g.toNonIndexed() : g;
         const pos = nonIndexed.attributes.position.array;
         const norm = nonIndexed.attributes.normal.array;
-        posArray.set(pos, offset);
-        normArray.set(norm, offset);
-        offset += pos.length;
+        posArray.set(pos, posOffset);
+        normArray.set(norm, posOffset);
+        posOffset += pos.length;
+
+        if (nonIndexed.attributes.uv) {
+          uvArray.set(nonIndexed.attributes.uv.array, uvOffset);
+          uvOffset += nonIndexed.attributes.uv.array.length;
+        } else {
+          uvOffset += (pos.length / 3) * 2;
+        }
       });
       const merged = new THREE.BufferGeometry();
       merged.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
       merged.setAttribute('normal', new THREE.BufferAttribute(normArray, 3));
+      merged.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
       return merged;
     }
 
-    // Geometria realistica Seggiolino da Stadio (seduta + schienale blu)
-    function createRealisticSeatGeometry() {
-      const seatBase = new THREE.BoxGeometry(0.48, 0.08, 0.38);
-      seatBase.translate(0, 0.1, 0);
+    // Texture procedurale in HD con veri volti umani adulti e abbigliamento da stadio
+    function createAdultFaceTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
 
-      const seatBack = new THREE.BoxGeometry(0.48, 0.45, 0.08);
-      seatBack.translate(0, 0.32, -0.16);
+      // Tonalità pelle realistica adulta
+      ctx.fillStyle = '#e8be96';
+      ctx.fillRect(0, 0, 512, 512);
+
+      // Capelli adulti pettinati / corti
+      ctx.fillStyle = '#221811';
+      ctx.beginPath();
+      ctx.rect(0, 0, 512, 135);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(256, 135, 170, Math.PI, 0, true);
+      ctx.fill();
+
+      // Basette
+      ctx.fillRect(40, 135, 45, 110);
+      ctx.fillRect(427, 135, 45, 110);
+
+      // Fronte e rughe d'espressione adulte
+      ctx.strokeStyle = '#c49a72';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(160, 175); ctx.lineTo(352, 175);
+      ctx.stroke();
+
+      // Sopracciglia marcate adulte
+      ctx.fillStyle = '#1c140e';
+      ctx.fillRect(110, 205, 95, 18);
+      ctx.fillRect(307, 205, 95, 18);
+
+      // Occhi realistici con bulbo bianco
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(157, 252, 38, 22, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(355, 252, 38, 22, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Iride castana / azzurra
+      ctx.fillStyle = '#1e3a5f';
+      ctx.beginPath(); ctx.arc(157, 252, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(355, 252, 18, 0, Math.PI * 2); ctx.fill();
+
+      // Pupilla nera e punto luce
+      ctx.fillStyle = '#000000';
+      ctx.beginPath(); ctx.arc(157, 252, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(355, 252, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(152, 248, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(350, 248, 4, 0, Math.PI * 2); ctx.fill();
+
+      // Naso adulto con narici
+      ctx.fillStyle = '#cf9e74';
+      ctx.beginPath();
+      ctx.moveTo(256, 235);
+      ctx.lineTo(236, 325);
+      ctx.lineTo(276, 325);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#8f613c';
+      ctx.beginPath(); ctx.arc(242, 325, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(270, 325, 6, 0, Math.PI * 2); ctx.fill();
+
+      // Bocca e labbra adulte
+      ctx.fillStyle = '#b06565';
+      ctx.beginPath();
+      ctx.ellipse(256, 380, 56, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Denti / sorriso
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(234, 375, 44, 9);
+
+      // Barba / ombra mascellare virile
+      ctx.fillStyle = 'rgba(30, 20, 10, 0.16)';
+      ctx.beginPath();
+      ctx.arc(256, 435, 175, 0, Math.PI);
+      ctx.fill();
+
+      const texture = new THREE.CanvasTexture(canvas);
+      return texture;
+    }
+
+    // Geometria Seggiolino: seduta blu con schienale sul RETRO (+Z)
+    function createRealisticSeatGeometry() {
+      // Seduta
+      const seatBase = new THREE.BoxGeometry(0.50, 0.08, 0.40);
+      seatBase.translate(0, 0.08, 0);
+
+      // Schienale sul RETRO (+Z, dietro la schiena dello spettatore!)
+      const seatBack = new THREE.BoxGeometry(0.50, 0.50, 0.08);
+      seatBack.translate(0, 0.33, 0.18);
 
       return mergeGeometries([seatBase, seatBack]);
     }
 
-    // Geometria realistica Spettatore 3D (Forma Umana: Testa sferica + Spalle/Busto + Gambe sedute)
-    function createHumanSpectatorGeometry() {
-      // 1. Testa realistica
-      const head = new THREE.SphereGeometry(0.12, 12, 10);
-      head.translate(0, 0.65, 0);
+    // Geometria Spettatore Adulto 3D con vera proporzione e VISO RIVOLTO VERSO IL CAMPO (-Z)
+    function createAdultHumanSpectatorGeometry() {
+      // 1. Testa adulta (con fronte e viso rivolti verso -Z)
+      const head = new THREE.SphereGeometry(0.14, 16, 12);
+      head.translate(0, 0.88, 0);
 
-      // 2. Busto e spalle da seduto
-      const torso = new THREE.CylinderGeometry(0.16, 0.20, 0.42, 10);
-      torso.translate(0, 0.38, 0);
+      // 2. Collo adulto
+      const neck = new THREE.CylinderGeometry(0.08, 0.09, 0.10, 10);
+      neck.translate(0, 0.74, 0);
 
-      // 3. Braccia e spalle
-      const shoulders = new THREE.BoxGeometry(0.46, 0.12, 0.24);
-      shoulders.translate(0, 0.50, 0);
+      // 3. Spalle e Busto adulto robusto (larghezza 0.52m, altezza 0.52m)
+      const torso = new THREE.BoxGeometry(0.52, 0.52, 0.28);
+      torso.translate(0, 0.46, 0.02);
 
-      // 4. Gambe sedute in avanti
-      const legs = new THREE.BoxGeometry(0.38, 0.16, 0.36);
-      legs.translate(0, 0.14, 0.12);
+      // 4. Braccia che scendono in avanti
+      const armL = new THREE.BoxGeometry(0.10, 0.45, 0.14);
+      armL.translate(-0.28, 0.44, -0.02);
+      const armR = armL.clone();
+      armR.translate(0.56, 0, 0);
 
-      return mergeGeometries([head, torso, shoulders, legs]);
+      // 5. Gambe sedute che si allungano in avanti verso il campo (-Z)
+      const thighs = new THREE.BoxGeometry(0.44, 0.18, 0.42);
+      thighs.translate(0, 0.14, -0.10);
+
+      return mergeGeometries([head, neck, torso, armL, armR, thighs]);
     }
 
-    // --- 7. STADIO TOTALMENTE CHIUSO CON CURVE, TETTO CONTINUO E PUBBLICO REALISTICO ---
-    function buildFullyEnclosedStadium() {
-      // Materiale cemento gradinate
+    // --- 7. STADIO MONUMENTALE SIGILLATO: CURVE CONTINUE SENZA BUCHI E TETTO COMPLETO ---
+    function buildSeamlessGrandStadium() {
       const concreteMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
 
-      // Materiale seggiolini: TUTTI DI UN UNICO COLORE (Blu Stadio Reale)
+      // Seggiolini tutti di colore blu uniforme reale
       const seatMat = new THREE.MeshStandardMaterial({
-        color: 0x1d4ed8, // Royal Blue
-        roughness: 0.4,
-        metalness: 0.1
+        color: 0x1d4ed8,
+        roughness: 0.35,
+        metalness: 0.15
       });
 
-      // Materiale spettatori: maglie con colori realistici da stadio
-      const spectatorMat = new THREE.MeshStandardMaterial({ roughness: 0.65, metalness: 0.05 });
+      // Materiale spettatori con texture volto e abbigliamento adulto
+      const faceTexture = createAdultFaceTexture();
+      const spectatorMat = new THREE.MeshStandardMaterial({
+        map: faceTexture,
+        roughness: 0.65,
+        metalness: 0.05
+      });
+
       const crowdColors = [
         0xdc2626, // Rosso
         0xffffff, // Bianco
@@ -1077,139 +1333,225 @@
       ];
 
       const steps = 15;
-      const stepW = 1.25;
-      const stepH = 0.95;
+      const stepW = 1.15;
+      const stepH = 0.90;
       const totalDepth = steps * stepW;
       const totalHeight = steps * stepH;
 
-      // Coordinate interne delle gradinate
-      const innerW = FIELD_WIDTH / 2 + 3.2;  // ~35.2m
-      const innerL = FIELD_LENGTH / 2 + 4.0; // ~54.0m
+      // Coordinate matematiche precise dei centri d'angolo
+      const X0 = 15;
+      const Z0 = 33;
+      const R0 = 22; // Raggio base del primo gradone
 
-      // Definiamo i settori: 4 rettilinei + 4 curve d'angolo per chiudere al 100% lo stadio
+      // Settori da costruire
       const sectors = [];
 
       // A) 4 Tribune Rettilinee
-      // Ovest
-      sectors.push({ type: 'straight', x: -innerW, z: 0, rotY: -Math.PI / 2, len: (innerL - 10) * 2 });
+      // Ovest (lungo asse Z)
+      sectors.push({
+        type: 'straight',
+        x: -(X0 + R0), z: 0,
+        rotY: -Math.PI / 2,
+        length: Z0 * 2
+      });
       // Est
-      sectors.push({ type: 'straight', x:  innerW, z: 0, rotY:  Math.PI / 2, len: (innerL - 10) * 2 });
-      // Nord
-      sectors.push({ type: 'straight', x: 0, z: -innerL, rotY:  Math.PI,     len: (innerW - 8) * 2 });
-      // Sud
-      sectors.push({ type: 'straight', x: 0, z:  innerL, rotY:  0,           len: (innerW - 8) * 2 });
+      sectors.push({
+        type: 'straight',
+        x:  (X0 + R0), z: 0,
+        rotY:  Math.PI / 2,
+        length: Z0 * 2
+      });
+      // Nord (dietro porta Nord)
+      sectors.push({
+        type: 'straight',
+        x: 0, z: -(Z0 + R0),
+        rotY: Math.PI,
+        length: X0 * 2
+      });
+      // Sud (dietro porta Sud)
+      sectors.push({
+        type: 'straight',
+        x: 0, z:  (Z0 + R0),
+        rotY: 0,
+        length: X0 * 2
+      });
 
-      // B) 4 Curve d'Angolo (ciascuna composta da 3 spicchi angolari per curvare perfettamente)
-      const cornerOffsets = [
-        { cx: -(innerW - 8), cz: -(innerL - 10), startAngle: Math.PI,     endAngle: Math.PI * 1.5 }, // Nord-Ovest
-        { cx:  (innerW - 8), cz: -(innerL - 10), startAngle: Math.PI * 1.5, endAngle: Math.PI * 2.0 }, // Nord-Est
-        { cx:  (innerW - 8), cz:  (innerL - 10), startAngle: 0,           endAngle: Math.PI * 0.5 }, // Sud-Est
-        { cx: -(innerW - 8), cz:  (innerL - 10), startAngle: Math.PI * 0.5, endAngle: Math.PI }        // Sud-Ovest
+      // B) 4 Curve d'Angolo ad arco continuo (ciascuna divisa in 10 spicchi perfettamente adiacenti)
+      const cornerDefs = [
+        // Nord-Ovest: raccorda Ovest (pi) a Nord (1.5*pi)
+        { cx: -X0, cz: -Z0, startAngle: Math.PI,     endAngle: Math.PI * 1.5 },
+        // Nord-Est: raccorda Nord (1.5*pi) a Est (2*pi)
+        { cx:  X0, cz: -Z0, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2.0 },
+        // Sud-Est: raccorda Est (0) a Sud (0.5*pi)
+        { cx:  X0, cz:  Z0, startAngle: 0,           endAngle: Math.PI * 0.5 },
+        // Sud-Ovest: raccorda Sud (0.5*pi) a Ovest (pi)
+        { cx: -X0, cz:  Z0, startAngle: Math.PI * 0.5, endAngle: Math.PI }
       ];
 
-      const cornerSlices = 3;
-      cornerOffsets.forEach(c => {
-        const dAngle = (c.endAngle - c.startAngle) / cornerSlices;
-        for (let i = 0; i < cornerSlices; i++) {
-          const midAngle = c.startAngle + (i + 0.5) * dAngle;
-          // Calcola posizione dello spicchio
-          const radius = 8.5;
-          const sx = c.cx + Math.cos(midAngle) * radius;
-          const sz = c.cz + Math.sin(midAngle) * radius;
+      const slicesPerCorner = 10;
+      cornerDefs.forEach(c => {
+        const dTheta = (c.endAngle - c.startAngle) / slicesPerCorner;
+        for (let i = 0; i < slicesPerCorner; i++) {
+          const theta = c.startAngle + (i + 0.5) * dTheta;
           sectors.push({
-            type: 'corner',
-            x: sx,
-            z: sz,
-            rotY: -midAngle + Math.PI / 2,
-            len: radius * dAngle * 1.35
+            type: 'corner_slice',
+            cx: c.cx,
+            cz: c.cz,
+            theta: theta,
+            dTheta: dTheta,
+            rotY: -theta + Math.PI / 2
           });
         }
       });
 
-      // Calcoliamo la capienza totale di seggiolini
-      let totalSeatCount = 0;
+      // Calcolo capienza per InstancedMesh
+      let totalSeats = 0;
       sectors.forEach(sec => {
-        const seatsPerRow = Math.max(4, Math.floor(sec.len / 0.65));
-        totalSeatCount += steps * seatsPerRow;
+        if (sec.type === 'straight') {
+          totalSeats += steps * Math.floor(sec.length / 0.65);
+        } else {
+          for (let s = 0; s < steps; s++) {
+            const r = R0 + s * stepW;
+            const sliceWidth = r * sec.dTheta * 1.04;
+            totalSeats += Math.max(3, Math.floor(sliceWidth / 0.65));
+          }
+        }
       });
 
-      // Creazione InstancedMesh per seggiolini (100% delle sedute) e persone (~85% dei posti)
       const seatGeo = createRealisticSeatGeometry();
-      const seatMesh = new THREE.InstancedMesh(seatGeo, seatMat, totalSeatCount);
+      const seatMesh = new THREE.InstancedMesh(seatGeo, seatMat, totalSeats);
       seatMesh.receiveShadow = true;
 
-      const humanGeo = createHumanSpectatorGeometry();
-      const maxHumans = Math.floor(totalSeatCount * 0.88);
+      const humanGeo = createAdultHumanSpectatorGeometry();
+      const maxHumans = Math.floor(totalSeats * 0.88);
       const humanMesh = new THREE.InstancedMesh(humanGeo, spectatorMat, maxHumans);
       humanMesh.castShadow = true;
 
-      let seatIndex = 0;
-      let humanIndex = 0;
+      let seatIdx = 0;
+      let humanIdx = 0;
       const dummy = new THREE.Object3D();
       const colorHelper = new THREE.Color();
 
-      // Costruzione dei gradoni e piazzamento dei seggiolini/spettatori
+      // Costruzione dei gradoni e piazzamento spettatori
       sectors.forEach(sec => {
-        const sectorGroup = new THREE.Group();
-        const seatsPerRow = Math.max(4, Math.floor(sec.len / 0.65));
+        const group = new THREE.Group();
 
-        for (let s = 0; s < steps; s++) {
-          const tierZ = s * stepW + stepW / 2;
-          const tierY = s * stepH + stepH / 2;
+        if (sec.type === 'straight') {
+          const seatsPerRow = Math.floor(sec.length / 0.65);
 
-          // Gradone in cemento
-          const tierGeo = new THREE.BoxGeometry(sec.len, stepH, stepW);
-          const tier = new THREE.Mesh(tierGeo, concreteMat);
-          tier.position.set(0, tierY, tierZ);
-          tier.receiveShadow = true;
-          sectorGroup.add(tier);
+          for (let s = 0; s < steps; s++) {
+            const tierZ = s * stepW + stepW / 2;
+            const tierY = s * stepH + stepH / 2;
 
-          // Popolamento seggiolini & persone
-          for (let i = 0; i < seatsPerRow && seatIndex < totalSeatCount; i++) {
-            const localX = (i - seatsPerRow / 2) * 0.65 + 0.32;
-            const localY = s * stepH + stepH;
-            const localZ = tierZ;
+            const tier = new THREE.Mesh(new THREE.BoxGeometry(sec.length, stepH, stepW), concreteMat);
+            tier.position.set(0, tierY, tierZ);
+            tier.receiveShadow = true;
+            group.add(tier);
 
-            dummy.position.set(localX, localY, localZ);
-            dummy.rotation.set(0, 0, 0);
-            dummy.updateMatrix();
+            for (let i = 0; i < seatsPerRow && seatIdx < totalSeats; i++) {
+              const localX = (i - seatsPerRow / 2) * 0.65 + 0.32;
+              const localY = s * stepH + stepH;
+              const localZ = tierZ;
 
-            const secMatrix = new THREE.Matrix4();
-            secMatrix.makeRotationY(sec.rotY);
-            secMatrix.setPosition(sec.x, 0, sec.z);
+              // Gli spettatori e i seggiolini guardano verso il campo (rotazione zero locale, -Z)
+              dummy.position.set(localX, localY, localZ);
+              dummy.rotation.set(0, 0, 0);
+              dummy.updateMatrix();
 
-            const worldMatrix = new THREE.Matrix4().multiplyMatrices(secMatrix, dummy.matrix);
-            seatMesh.setMatrixAt(seatIndex, worldMatrix);
-            seatIndex++;
+              const standMtx = new THREE.Matrix4();
+              standMtx.makeRotationY(sec.rotY);
+              standMtx.setPosition(sec.x, 0, sec.z);
 
-            // Nella maggior parte dei seggiolini (~85%) c'è una persona
-            if (Math.random() < 0.86 && humanIndex < maxHumans) {
-              humanMesh.setMatrixAt(humanIndex, worldMatrix);
-              const col = crowdColors[Math.floor(Math.random() * crowdColors.length)];
-              colorHelper.setHex(col);
-              humanMesh.setColorAt(humanIndex, colorHelper);
-              humanIndex++;
+              const worldMtx = new THREE.Matrix4().multiplyMatrices(standMtx, dummy.matrix);
+              seatMesh.setMatrixAt(seatIdx, worldMtx);
+              seatIdx++;
+
+              if (Math.random() < 0.86 && humanIdx < maxHumans) {
+                humanMesh.setMatrixAt(humanIdx, worldMtx);
+                const col = crowdColors[Math.floor(Math.random() * crowdColors.length)];
+                colorHelper.setHex(col);
+                humanMesh.setColorAt(humanIdx, colorHelper);
+                humanIdx++;
+              }
             }
           }
+
+          // Tetto dritto perfettamente ancorato
+          const roofGeo = new THREE.BoxGeometry(sec.length + 0.5, 0.45, totalDepth + 4);
+          const roofMat = new THREE.MeshStandardMaterial({
+            color: 0x475569,
+            roughness: 0.35,
+            metalness: 0.5,
+            side: THREE.DoubleSide
+          });
+          const roof = new THREE.Mesh(roofGeo, roofMat);
+          roof.position.set(0, totalHeight + 4.0, totalDepth / 2 - 1.2);
+          roof.rotation.x = 0.05;
+          roof.castShadow = true;
+          group.add(roof);
+
+          group.position.set(sec.x, 0, sec.z);
+          group.rotation.y = sec.rotY;
+          scene.add(group);
+
+        } else if (sec.type === 'corner_slice') {
+          // Spicchio della curva: ogni gradone si estende ad arco con zero fessure
+          for (let s = 0; s < steps; s++) {
+            const r = R0 + s * stepW;
+            const tierY = s * stepH + stepH / 2;
+            const sliceWidth = r * sec.dTheta * 1.05; // 5% di sovrapposizione per sigillare ogni fessura
+
+            const tier = new THREE.Mesh(new THREE.BoxGeometry(sliceWidth, stepH, stepW), concreteMat);
+            const gx = sec.cx + Math.cos(sec.theta) * r;
+            const gz = sec.cz + Math.sin(sec.theta) * r;
+            tier.position.set(gx, tierY, gz);
+            tier.rotation.y = sec.rotY;
+            tier.receiveShadow = true;
+            scene.add(tier);
+
+            const seatsOnSlice = Math.max(3, Math.floor(sliceWidth / 0.65));
+            for (let i = 0; i < seatsOnSlice && seatIdx < totalSeats; i++) {
+              const localX = (i - seatsOnSlice / 2) * 0.65 + 0.32;
+              dummy.position.set(localX, s * stepH + stepH, 0);
+              dummy.rotation.set(0, 0, 0);
+              dummy.updateMatrix();
+
+              const sliceMtx = new THREE.Matrix4();
+              sliceMtx.makeRotationY(sec.rotY);
+              sliceMtx.setPosition(gx, 0, gz);
+
+              const worldMtx = new THREE.Matrix4().multiplyMatrices(sliceMtx, dummy.matrix);
+              seatMesh.setMatrixAt(seatIdx, worldMtx);
+              seatIdx++;
+
+              if (Math.random() < 0.86 && humanIdx < maxHumans) {
+                humanMesh.setMatrixAt(humanIdx, worldMtx);
+                const col = crowdColors[Math.floor(Math.random() * crowdColors.length)];
+                colorHelper.setHex(col);
+                humanMesh.setColorAt(humanIdx, colorHelper);
+                humanIdx++;
+              }
+            }
+          }
+
+          // Tetto dello spicchio d'angolo (sovrapposto a ventaglio continuo, zero buchi)
+          const outerR = R0 + totalDepth / 2;
+          const cornerRoofWidth = outerR * sec.dTheta * 1.15;
+          const cornerRoofGeo = new THREE.BoxGeometry(cornerRoofWidth, 0.45, totalDepth + 4);
+          const roofMat = new THREE.MeshStandardMaterial({
+            color: 0x475569,
+            roughness: 0.35,
+            metalness: 0.5,
+            side: THREE.DoubleSide
+          });
+          const cornerRoof = new THREE.Mesh(cornerRoofGeo, roofMat);
+          const rx = sec.cx + Math.cos(sec.theta) * outerR;
+          const rz = sec.cz + Math.sin(sec.theta) * outerR;
+          cornerRoof.position.set(rx, totalHeight + 4.0, rz);
+          cornerRoof.rotation.y = sec.rotY;
+          cornerRoof.rotation.x = 0.05;
+          scene.add(cornerRoof);
         }
-
-        // Tetto a sbalzo dello stadio (senza buchi, continuo)
-        const roofGeo = new THREE.BoxGeometry(sec.len + 1.2, 0.45, totalDepth + 5);
-        const roofMat = new THREE.MeshStandardMaterial({
-          color: 0x475569, // Grigio acciaio luminoso (no nero pece)
-          roughness: 0.3,
-          metalness: 0.6,
-          side: THREE.DoubleSide
-        });
-        const roof = new THREE.Mesh(roofGeo, roofMat);
-        roof.position.set(0, totalHeight + 4.5, totalDepth / 2 - 1.5);
-        roof.rotation.x = 0.04;
-        roof.castShadow = true;
-        sectorGroup.add(roof);
-
-        sectorGroup.position.set(sec.x, 0, sec.z);
-        sectorGroup.rotation.y = sec.rotY;
-        scene.add(sectorGroup);
       });
 
       seatMesh.instanceMatrix.needsUpdate = true;
@@ -1219,26 +1561,25 @@
       if (humanMesh.instanceColor) humanMesh.instanceColor.needsUpdate = true;
       scene.add(humanMesh);
 
-      // C) MURO PERIMETRALE ESTERNO (FACCIATA): CHIUDE TOTALMENTE LO STADIO ALL'ESTERNO
-      // "fuori dallo stadio non deve vedersi nulla"
-      const outerWallRadius = Math.max(innerW, innerL) + totalDepth + 2;
-      const wallGeo = new THREE.CylinderGeometry(outerWallRadius, outerWallRadius, totalHeight + 8, 36, 1, true);
+      // C) MURO PERIMETRALE ESTERNO SIGILLATO AL 100%: NESSUN BUCO DIETRO GLI SPALTI
+      const maxOuterRadius = Math.max(X0, Z0) + R0 + totalDepth + 1.5;
+      const wallGeo = new THREE.CylinderGeometry(maxOuterRadius, maxOuterRadius, totalHeight + 6, 48, 1, true);
       const wallMat = new THREE.MeshStandardMaterial({
         color: 0x1e293b,
-        roughness: 0.7,
-        metalness: 0.3,
-        side: THREE.BackSide // Visibile dall'interno
+        roughness: 0.8,
+        metalness: 0.2,
+        side: THREE.BackSide
       });
-      const outerWall = new THREE.Mesh(wallGeo, wallMat);
-      outerWall.position.set(0, (totalHeight + 8) / 2, 0);
-      scene.add(outerWall);
+      const wallMesh = new THREE.Mesh(wallGeo, wallMat);
+      wallMesh.position.set(0, (totalHeight + 6) / 2, 0);
+      scene.add(wallMesh);
 
-      // D) LUCE AMBIENTALE DAL BASSO: ELIMINA LE CHIAZZE NERE SOTTO IL TETTO
-      const upwardLight = new THREE.DirectionalLight(0xa5b4fc, 0.55);
-      upwardLight.position.set(0, -10, 0); // Illumina verso l'alto l'intradosso del tetto
-      scene.add(upwardLight);
+      // D) LUCE AMBIENTALE CHE ILLUMINA IL TETTO DAL BASSO (ZERO CHIAZZE NERE)
+      const roofGlow = new THREE.DirectionalLight(0xcfd8dc, 0.75);
+      roofGlow.position.set(0, -5, 0);
+      scene.add(roofGlow);
     }
-    buildFullyEnclosedStadium();
+    buildSeamlessGrandStadium();
 
     // Bandierine d'angolo
     function createCornerFlags() {
@@ -1480,12 +1821,14 @@
 
     const ball = {
       pos: new THREE.Vector3(0, BALL_RADIUS, 0),
+      prevPos: new THREE.Vector3(0, BALL_RADIUS, 0),
       vel: new THREE.Vector3(0, 0, 0),
       radius: BALL_RADIUS,
       restitution: 0.72,
       friction: 0.985,
       reset: function() {
         this.pos.set(0, BALL_RADIUS + 0.1, 0);
+        this.prevPos.copy(this.pos);
         this.vel.set(0, 0, 0);
       }
     };
@@ -1674,8 +2017,10 @@
     // --- 14. SCIVOLATA E CONTRASTO FLUIDI E CORRETTI ---
     const actionToast = document.getElementById('action-toast');
     let toastTimeout = null;
+    let showOnScreenToasts = localStorage.getItem('football_show_toasts') !== '0';
 
     function showToast(text) {
+      if (!showOnScreenToasts) return;
       actionToast.textContent = text;
       actionToast.classList.add('show');
       clearTimeout(toastTimeout);
@@ -1833,16 +2178,51 @@
     function checkGoal() {
       if (isGoalActive) return;
 
-      const insideX = Math.abs(ball.pos.x) < GOAL_WIDTH / 2 - 0.1;
-      const insideY = ball.pos.y < GOAL_HEIGHT;
-      const passedN = ball.pos.z < -FIELD_LENGTH / 2 && ball.pos.z > -FIELD_LENGTH / 2 - GOAL_DEPTH_BOTTOM;
-      const passedS = ball.pos.z >  FIELD_LENGTH / 2 && ball.pos.z <  FIELD_LENGTH / 2 + GOAL_DEPTH_BOTTOM;
+      let goalScored = false;
 
-      if (insideX && insideY && (passedN || passedS)) {
+      // 1. Porta Nord (Z = -FIELD_LENGTH / 2 = -50)
+      // La palla deve attraversare la linea di porta dall'interno del campo (prevPos.z >= -50)
+      // verso l'interno della porta (pos.z < -50)
+      if (ball.prevPos.z >= -FIELD_LENGTH / 2 && ball.pos.z < -FIELD_LENGTH / 2) {
+        const dz = ball.pos.z - ball.prevPos.z;
+        if (Math.abs(dz) > 1e-6) {
+          const t = (-FIELD_LENGTH / 2 - ball.prevPos.z) / dz;
+          const crossX = ball.prevPos.x + t * (ball.pos.x - ball.prevPos.x);
+          const crossY = ball.prevPos.y + t * (ball.pos.y - ball.prevPos.y);
+
+          // Deve passare STRETTAMENTE tra i due pali interni e sotto la traversa
+          const maxCrossX = GOAL_WIDTH / 2 - 0.08; // limite interno pali
+          if (Math.abs(crossX) <= maxCrossX && crossY >= 0 && crossY <= GOAL_HEIGHT) {
+            goalScored = true;
+          }
+        }
+      }
+
+      // 2. Porta Sud (Z = +FIELD_LENGTH / 2 = +50)
+      // La palla deve attraversare la linea di porta dall'interno del campo (prevPos.z <= +50)
+      // verso l'interno della porta (pos.z > +50)
+      if (!goalScored && ball.prevPos.z <= FIELD_LENGTH / 2 && ball.pos.z > FIELD_LENGTH / 2) {
+        const dz = ball.pos.z - ball.prevPos.z;
+        if (Math.abs(dz) > 1e-6) {
+          const t = (FIELD_LENGTH / 2 - ball.prevPos.z) / dz;
+          const crossX = ball.prevPos.x + t * (ball.pos.x - ball.prevPos.x);
+          const crossY = ball.prevPos.y + t * (ball.pos.y - ball.prevPos.y);
+
+          const maxCrossX = GOAL_WIDTH / 2 - 0.08;
+          if (Math.abs(crossX) <= maxCrossX && crossY >= 0 && crossY <= GOAL_HEIGHT) {
+            goalScored = true;
+          }
+        }
+      }
+
+      if (goalScored) {
         isGoalActive = true;
         scoreCount++;
         scoreValElem.textContent = scoreCount;
-        sounds.playGoalCheer();
+        sounds.playNetHit();
+        setTimeout(() => {
+          sounds.playGoalCheer();
+        }, 140);
 
         goalBanner.classList.add('show');
         setTimeout(() => {
@@ -1944,6 +2324,9 @@
       }
 
       // --- FISICA PALLONE LIBERA CON TOCCO MORBIDO (NO DESPAWN, NO INCOLLATA) ---
+      // Salva posizione precedente della palla prima del calcolo della fisica
+      ball.prevPos.copy(ball.pos);
+
       // Gravità standard sulla palla
       ball.vel.y -= 18.0 * delta;
       ball.pos.addScaledVector(ball.vel, delta);
@@ -2033,12 +2416,69 @@
         }
       });
 
-      // Smorzamento rete
-      const inNetN = ball.pos.z < -FIELD_LENGTH / 2 && ball.pos.z > -FIELD_LENGTH / 2 - GOAL_DEPTH_BOTTOM;
-      const inNetS = ball.pos.z >  FIELD_LENGTH / 2 && ball.pos.z <  FIELD_LENGTH / 2 + GOAL_DEPTH_BOTTOM;
-      if ((inNetN || inNetS) && Math.abs(ball.pos.x) < GOAL_WIDTH / 2 && ball.pos.y < GOAL_HEIGHT) {
-        ball.vel.multiplyScalar(0.82);
-      }
+      // Gestione Fisica Reti della Porta (Porta Nord e Porta Sud)
+      // Impedisce alla palla di entrare da fuori o di uscire da dietro/fianchi, e applica il suono realistico della rete
+      [-1, 1].forEach(side => {
+        const goalZ = side * (FIELD_LENGTH / 2);
+        const isNorth = (side === -1);
+        const zSign = isNorth ? -1 : 1;
+        const W2 = GOAL_WIDTH / 2;
+        const H = GOAL_HEIGHT;
+
+        // Verifica se la palla si trova nella zona Z della porta (tra linea di porta e fondo rete)
+        const inZZone = isNorth 
+          ? (ball.pos.z <= goalZ + 0.5 && ball.pos.z >= goalZ - GOAL_DEPTH_BOTTOM - 0.5)
+          : (ball.pos.z >= goalZ - 0.5 && ball.pos.z <= goalZ + GOAL_DEPTH_BOTTOM + 0.5);
+
+        if (inZZone && ball.pos.y <= H + 0.5) {
+          const depthRatio = Math.max(0, Math.min(1, ball.pos.y / H));
+          const maxD = THREE.MathUtils.lerp(GOAL_DEPTH_BOTTOM, GOAL_DEPTH_TOP, depthRatio);
+          const backZ = goalZ + zSign * maxD;
+
+          const isBehindLine = isNorth ? (ball.pos.z < goalZ) : (ball.pos.z > goalZ);
+          const isInsideWidth = Math.abs(ball.pos.x) < W2;
+
+          if (isBehindLine) {
+            if (isInsideWidth) {
+              // Palla DENTRO la porta
+              // 1. Smorzamento generale energia della rete
+              ball.vel.multiplyScalar(0.85);
+
+              // 2. Fondo / Tetto inclinato della rete
+              const pastBack = isNorth ? (ball.pos.z < backZ + ball.radius) : (ball.pos.z > backZ - ball.radius);
+              if (pastBack) {
+                ball.pos.z = backZ - zSign * ball.radius;
+                ball.vel.z = -ball.vel.z * 0.15;
+                ball.vel.x *= 0.5;
+                ball.vel.y *= 0.5;
+                if (ball.vel.lengthSq() > 0.08) sounds.playNetHit();
+              }
+
+              // 3. Pareti laterali interne
+              if (Math.abs(ball.pos.x) > W2 - ball.radius) {
+                ball.pos.x = Math.sign(ball.pos.x) * (W2 - ball.radius);
+                ball.vel.x = -ball.vel.x * 0.2;
+                if (ball.vel.lengthSq() > 0.08) sounds.playNetHit();
+              }
+            } else {
+              // Palla FUORI dalla porta (a lato) che cerca di entrare o toccare l'esterno della rete
+              if (Math.abs(ball.pos.x) < W2 + ball.radius) {
+                ball.pos.x = Math.sign(ball.pos.x) * (W2 + ball.radius);
+                ball.vel.x = -ball.vel.x * 0.4;
+                sounds.playNetHit();
+              }
+            }
+
+            // Palla dietro la rete (dall'esterno verso il campo)
+            const pastBackOutside = isNorth ? (ball.pos.z > backZ - ball.radius && ball.pos.z < backZ) : (ball.pos.z < backZ + ball.radius && ball.pos.z > backZ);
+            if (!isInsideWidth && pastBackOutside) {
+              ball.pos.z = backZ + zSign * ball.radius;
+              ball.vel.z = -ball.vel.z * 0.4;
+              sounds.playNetHit();
+            }
+          }
+        }
+      });
 
       // Rimbalzo sui cartelloni LED esterni
       const bMaxX = FIELD_WIDTH / 2 + 2.8;
@@ -2073,6 +2513,7 @@
     // --- 18. INTERFACCIA MENU PERSONALIZZAZIONE COMANDI (CON SUPPORTO CONTROLLER) ---
     const settingsModal = document.getElementById('settings-modal');
     const controlsListElem = document.getElementById('controls-list');
+    const toggleToastsBtn = document.getElementById('toggle-toasts-btn');
     const openSettingsBtn = document.getElementById('open-settings-btn');
     const modalSettingsBtn = document.getElementById('modal-settings-btn');
     const closeSettingsBtn = document.getElementById('close-settings-btn');
@@ -2081,6 +2522,31 @@
 
     let isSettingsOpen = false;
     let waitingActionKey = null;
+
+    function updateToastBtnUI() {
+      if (!toggleToastsBtn) return;
+      if (showOnScreenToasts) {
+        toggleToastsBtn.textContent = 'ATTIVO (Mostra)';
+        toggleToastsBtn.classList.remove('disabled');
+      } else {
+        toggleToastsBtn.textContent = 'DISATTIVATO (Nascosto)';
+        toggleToastsBtn.classList.add('disabled');
+      }
+    }
+    updateToastBtnUI();
+
+    if (toggleToastsBtn) {
+      toggleToastsBtn.addEventListener('click', () => {
+        showOnScreenToasts = !showOnScreenToasts;
+        localStorage.setItem('football_show_toasts', showOnScreenToasts ? '1' : '0');
+        updateToastBtnUI();
+        if (showOnScreenToasts) {
+          showToast('Scritte a schermo attivate');
+        } else {
+          actionToast.classList.remove('show');
+        }
+      });
+    }
 
     function renderControlsList() {
       controlsListElem.innerHTML = '';
@@ -2168,6 +2634,7 @@
       isSettingsOpen = true;
       if (document.exitPointerLock) document.exitPointerLock();
       renderControlsList();
+      updateToastBtnUI();
       settingsModal.classList.add('show');
     }
 
@@ -2191,6 +2658,12 @@
       if (e.code === 'KeyP') {
         if (isSettingsOpen) closeSettings();
         else openSettings();
+      } else if (e.code === 'KeyO' && !isSettingsOpen) {
+        showOnScreenToasts = !showOnScreenToasts;
+        localStorage.setItem('football_show_toasts', showOnScreenToasts ? '1' : '0');
+        updateToastBtnUI();
+        if (showOnScreenToasts) showToast('Notifiche a schermo: ATTIVATE');
+        else actionToast.classList.remove('show');
       }
     });
 
