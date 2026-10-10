@@ -940,11 +940,11 @@
     renderer.toneMappingExposure = 1.05;
     container.appendChild(renderer.domElement);
 
-    // Illuminazione stadio
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334433, 0.7);
+    // Illuminazione stadio realistica in stile broadcast (colori naturali e volti ben illuminati)
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8fa1b3, 0.9);
     scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfffaed, 1.05);
+    const sunLight = new THREE.DirectionalLight(0xfffaed, 1.15);
     sunLight.position.set(45, 80, 35);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
@@ -957,6 +957,11 @@
     sunLight.shadow.camera.top = sd;
     sunLight.shadow.camera.bottom = -sd;
     scene.add(sunLight);
+
+    // Luce di riempimento opposta (faro stadio) per illuminare uniformemente tutti i settori
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.65);
+    fillLight.position.set(-45, 75, -35);
+    scene.add(fillLight);
 
     // --- 5. TEXTURE CAMPO REGOLAMENTARE FIFA ---
     function createRegulationPitchTexture() {
@@ -1176,219 +1181,327 @@
       return merged;
     }
 
-    // Texture procedurale in HD con veri volti umani adulti e abbigliamento da stadio
+    // Texture procedurale in HD con veri lineamenti del volto umano adulto
     function createAdultFaceTexture() {
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 512;
       const ctx = canvas.getContext('2d');
 
-      // Tonalità pelle realistica adulta
-      ctx.fillStyle = '#e8be96';
+      // Base bianca neutra con sfumatura d'ombra (moltiplicata con instanceColor produce la tonalità esatta della pelle: rosa o marrone)
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, 512, 512);
 
-      // Capelli adulti pettinati / corti
-      ctx.fillStyle = '#221811';
-      ctx.beginPath();
-      ctx.rect(0, 0, 512, 135);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(256, 135, 170, Math.PI, 0, true);
-      ctx.fill();
-
-      // Basette
-      ctx.fillRect(40, 135, 45, 110);
-      ctx.fillRect(427, 135, 45, 110);
+      const grad = ctx.createRadialGradient(256, 256, 30, 256, 256, 250);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.7, '#f4f4f4');
+      grad.addColorStop(1, '#d0d0d0');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
 
       // Fronte e rughe d'espressione adulte
-      ctx.strokeStyle = '#c49a72';
+      ctx.strokeStyle = 'rgba(70, 50, 40, 0.28)';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(160, 175); ctx.lineTo(352, 175);
+      ctx.moveTo(170, 185); ctx.lineTo(342, 185);
+      ctx.moveTo(190, 172); ctx.lineTo(322, 172);
       ctx.stroke();
 
-      // Sopracciglia marcate adulte
+      // Sopracciglia realistiche sagomate
       ctx.fillStyle = '#1c140e';
-      ctx.fillRect(110, 205, 95, 18);
-      ctx.fillRect(307, 205, 95, 18);
-
-      // Occhi realistici con bulbo bianco
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.ellipse(157, 252, 38, 22, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(355, 252, 38, 22, 0, 0, Math.PI * 2); ctx.fill();
-
-      // Iride castana / azzurra
-      ctx.fillStyle = '#1e3a5f';
-      ctx.beginPath(); ctx.arc(157, 252, 18, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(355, 252, 18, 0, Math.PI * 2); ctx.fill();
-
-      // Pupilla nera e punto luce
-      ctx.fillStyle = '#000000';
-      ctx.beginPath(); ctx.arc(157, 252, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(355, 252, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(152, 248, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(350, 248, 4, 0, Math.PI * 2); ctx.fill();
-
-      // Naso adulto con narici
-      ctx.fillStyle = '#cf9e74';
       ctx.beginPath();
-      ctx.moveTo(256, 235);
-      ctx.lineTo(236, 325);
-      ctx.lineTo(276, 325);
+      ctx.moveTo(125, 218);
+      ctx.quadraticCurveTo(175, 202, 220, 215);
+      ctx.quadraticCurveTo(175, 210, 125, 218);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(292, 215);
+      ctx.quadraticCurveTo(337, 202, 387, 218);
+      ctx.quadraticCurveTo(337, 210, 292, 215);
+      ctx.fill();
+
+      // Occhi realistici
+      ctx.strokeStyle = 'rgba(30, 20, 15, 0.45)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(172, 240, 36, Math.PI * 0.85, Math.PI * 0.15, false);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(340, 240, 36, Math.PI * 0.85, Math.PI * 0.15, false);
+      ctx.stroke();
+
+      // Sclera (bianco dell'occhio)
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.ellipse(172, 245, 36, 19, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(340, 245, 36, 19, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Iride naturale
+      ctx.fillStyle = '#2d221a';
+      ctx.beginPath(); ctx.arc(172, 245, 17, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(340, 245, 17, 0, Math.PI * 2); ctx.fill();
+
+      // Pupilla nera
+      ctx.fillStyle = '#000000';
+      ctx.beginPath(); ctx.arc(172, 245, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(340, 245, 9, 0, Math.PI * 2); ctx.fill();
+
+      // Riflesso di luce vivo
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(167, 241, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(335, 241, 4, 0, Math.PI * 2); ctx.fill();
+
+      // Naso con ombreggiatura e narici
+      ctx.fillStyle = 'rgba(60, 40, 30, 0.18)';
+      ctx.beginPath();
+      ctx.moveTo(256, 215);
+      ctx.lineTo(240, 305);
+      ctx.lineTo(272, 305);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = '#8f613c';
-      ctx.beginPath(); ctx.arc(242, 325, 6, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(270, 325, 6, 0, Math.PI * 2); ctx.fill();
 
-      // Bocca e labbra adulte
-      ctx.fillStyle = '#b06565';
+      ctx.fillStyle = 'rgba(50, 30, 20, 0.38)';
+      ctx.beginPath(); ctx.arc(244, 305, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(268, 305, 5, 0, Math.PI * 2); ctx.fill();
+
+      // Labbra adulte sagomate
+      ctx.fillStyle = '#a65650';
       ctx.beginPath();
-      ctx.ellipse(256, 380, 56, 16, 0, 0, Math.PI * 2);
+      ctx.ellipse(256, 355, 48, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#4a2020';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(216, 355);
+      ctx.lineTo(296, 355);
+      ctx.stroke();
+
+      // Ombra mascellare virile
+      ctx.fillStyle = 'rgba(30, 20, 15, 0.10)';
+      ctx.beginPath();
+      ctx.arc(256, 395, 130, 0, Math.PI);
       ctx.fill();
 
-      // Denti / sorriso
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(234, 375, 44, 9);
-
-      // Barba / ombra mascellare virile
-      ctx.fillStyle = 'rgba(30, 20, 10, 0.16)';
-      ctx.beginPath();
-      ctx.arc(256, 435, 175, 0, Math.PI);
-      ctx.fill();
-
-      const texture = new THREE.CanvasTexture(canvas);
-      return texture;
+      return new THREE.CanvasTexture(canvas);
     }
 
     // Geometria Seggiolino: seduta blu con schienale sul RETRO (+Z)
     function createRealisticSeatGeometry() {
-      // Seduta
       const seatBase = new THREE.BoxGeometry(0.50, 0.08, 0.40);
       seatBase.translate(0, 0.08, 0);
 
-      // Schienale sul RETRO (+Z, dietro la schiena dello spettatore!)
       const seatBack = new THREE.BoxGeometry(0.50, 0.50, 0.08);
       seatBack.translate(0, 0.33, 0.18);
 
       return mergeGeometries([seatBase, seatBack]);
     }
 
-    // Geometria Spettatore Adulto 3D con vera proporzione e VISO RIVOLTO VERSO IL CAMPO (-Z)
-    function createAdultHumanSpectatorGeometry() {
-      // 1. Testa adulta (con fronte e viso rivolti verso -Z)
-      const head = new THREE.SphereGeometry(0.14, 16, 12);
-      head.translate(0, 0.88, 0);
+    // Geometria Abbigliamento (Corpo, Braccia, Pantaloni e Scarpe - NESSUNA FACCIA QUI!)
+    function createRealisticClothesGeometry() {
+      // 1. Torso vestito (Giacca / Felpa / Maglietta)
+      const torso = new THREE.BoxGeometry(0.48, 0.46, 0.26);
+      torso.translate(0, 0.44, 0.02);
 
-      // 2. Collo adulto
-      const neck = new THREE.CylinderGeometry(0.08, 0.09, 0.10, 10);
-      neck.translate(0, 0.74, 0);
+      // Colletto / Spalle
+      const collar = new THREE.BoxGeometry(0.30, 0.08, 0.22);
+      collar.translate(0, 0.67, 0.02);
 
-      // 3. Spalle e Busto adulto robusto (larghezza 0.52m, altezza 0.52m)
-      const torso = new THREE.BoxGeometry(0.52, 0.52, 0.28);
-      torso.translate(0, 0.46, 0.02);
+      // 2. Braccia con maniche
+      const armL = new THREE.BoxGeometry(0.11, 0.42, 0.13);
+      armL.translate(-0.25, 0.42, 0.0);
+      const armR = new THREE.BoxGeometry(0.11, 0.42, 0.13);
+      armR.translate(0.25, 0.42, 0.0);
 
-      // 4. Braccia che scendono in avanti
-      const armL = new THREE.BoxGeometry(0.10, 0.45, 0.14);
-      armL.translate(-0.28, 0.44, -0.02);
-      const armR = armL.clone();
-      armR.translate(0.56, 0, 0);
+      // 3. Gambe sedute in pantaloni (jeans / tute)
+      const thighs = new THREE.BoxGeometry(0.44, 0.16, 0.38);
+      thighs.translate(0, 0.14, -0.06);
 
-      // 5. Gambe sedute che si allungano in avanti verso il campo (-Z)
-      const thighs = new THREE.BoxGeometry(0.44, 0.18, 0.42);
-      thighs.translate(0, 0.14, -0.10);
+      const shins = new THREE.BoxGeometry(0.42, 0.28, 0.14);
+      shins.translate(0, -0.06, -0.23);
 
-      return mergeGeometries([head, neck, torso, armL, armR, thighs]);
+      // 4. Scarpe da ginnastica ai piedi
+      const shoeL = new THREE.BoxGeometry(0.13, 0.08, 0.22);
+      shoeL.translate(-0.13, -0.22, -0.26);
+      const shoeR = new THREE.BoxGeometry(0.13, 0.08, 0.22);
+      shoeR.translate(0.13, -0.22, -0.26);
+
+      return mergeGeometries([torso, collar, armL, armR, thighs, shins, shoeL, shoeR]);
     }
 
-    // --- 7. STADIO MONUMENTALE SIGILLATO: CURVE CONTINUE SENZA BUCHI E TETTO COMPLETO ---
+    // Geometria Pelle Umana: Testa (Viso rivolto a -Z), Collo e Mani
+    function createRealisticSkinGeometry() {
+      // 1. Testa adulta (sfera orientata con viso verso il campo a -Z)
+      const head = new THREE.SphereGeometry(0.13, 20, 16);
+      head.translate(0, 0.85, 0);
+
+      // 2. Collo anatomico
+      const neck = new THREE.CylinderGeometry(0.075, 0.085, 0.11, 12);
+      neck.translate(0, 0.72, 0);
+
+      // 3. Mani che spuntano dalle maniche
+      const handL = new THREE.BoxGeometry(0.08, 0.05, 0.11);
+      handL.translate(-0.19, 0.22, 0.08);
+      const handR = new THREE.BoxGeometry(0.08, 0.05, 0.11);
+      handR.translate(0.19, 0.22, 0.08);
+
+      return mergeGeometries([head, neck, handL, handR]);
+    }
+
+    // Geometria Capelli 3D
+    function createRealisticHairGeometry() {
+      // Calotta volumetrica di capelli sulla sommità e sul retro del capo
+      const hair = new THREE.SphereGeometry(0.136, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58);
+      hair.translate(0, 0.86, 0.015);
+      return hair;
+    }
+
+    // Tavolozza realistica delle tonalità di pelle umana (Rosa e Marrone)
+    const REAL_SKIN_COLORS = [
+      new THREE.Color(0xffded2), // 1. Rosa / Porcellana chiaro
+      new THREE.Color(0xfacdb7), // 2. Rosa pesca naturale
+      new THREE.Color(0xf4c1a2), // 3. Pesca caldo
+      new THREE.Color(0xebb392), // 4. Beige dorato chiaro
+      new THREE.Color(0xdca07d), // 5. Mediterraneo naturale
+      new THREE.Color(0xcb885b), // 6. Mediterraneo abbronzato
+      new THREE.Color(0xb57348), // 7. Ambra / Castano dorato
+      new THREE.Color(0x995a32), // 8. Marrone chiaro cannella
+      new THREE.Color(0x7c4322), // 9. Marrone caldo
+      new THREE.Color(0x5e3017), // 10. Marrone cioccolato
+      new THREE.Color(0x422110)  // 11. Marrone scuro
+    ];
+
+    // Tavolozza abiti da stadio realistici e casual ("VESTITI A CASO")
+    const CASUAL_CLOTHES_COLORS = [
+      new THREE.Color(0x1e3a8a), // Blu Navy classico
+      new THREE.Color(0x0f172a), // Blu notte profondo
+      new THREE.Color(0x18181b), // Nero urbano
+      new THREE.Color(0x334155), // Grigio ardesia
+      new THREE.Color(0x475569), // Grigio medio
+      new THREE.Color(0x94a3b8), // Grigio melange chiaro
+      new THREE.Color(0xf1f5f9), // Bianco panna
+      new THREE.Color(0xb91c1c), // Rosso rubino
+      new THREE.Color(0x7f1d1d), // Bordeaux
+      new THREE.Color(0x0284c7), // Azzurro brillante
+      new THREE.Color(0x0369a1), // Blu reale
+      new THREE.Color(0x15803d), // Verde foresta
+      new THREE.Color(0x166534), // Verde scuro felpa
+      new THREE.Color(0x3f6212), // Verde oliva / Militare
+      new THREE.Color(0xd97706), // Giallo ocra caldo
+      new THREE.Color(0xc2410c), // Arancione bruciato
+      new THREE.Color(0x78350f), // Marrone giacca in cuoio
+      new THREE.Color(0x581c87), // Viola scuro
+      new THREE.Color(0x2563eb), // Jeans denim blu
+      new THREE.Color(0x0d9488), // Verde petrolio / Teal
+      new THREE.Color(0xe11d48), // Magenta / Rosso acceso
+      new THREE.Color(0xdc2626), // Rosso gara
+      new THREE.Color(0x1e293b), // Windbreaker tecnico
+      new THREE.Color(0xffffff)  // Bianco puro
+    ];
+
+    // Tavolozza capelli naturali
+    const REAL_HAIR_COLORS = [
+      new THREE.Color(0x111111), // Nero corvino
+      new THREE.Color(0x1f1610), // Bruno scuro
+      new THREE.Color(0x2f1b0c), // Castano scuro
+      new THREE.Color(0x4a2a14), // Castano medio
+      new THREE.Color(0x6a3f1d), // Castano chiaro
+      new THREE.Color(0x8b5a2b), // Biondo scuro / Miele
+      new THREE.Color(0xbf9553), // Biondo dorato
+      new THREE.Color(0x71717a), // Brizzolato / Grigio
+      new THREE.Color(0xd4d4d8)  // Bianco / Argento
+    ];
+
+    // --- 7. STADIO MONUMENTALE: SPALTI FUORI DAL CAMPO E TIFOSI REALISTICI ---
     function buildSeamlessGrandStadium() {
       const concreteMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
 
-      // Seggiolini tutti di colore blu uniforme reale
+      // 1. Materiale Seggiolini blu reale uniforme
       const seatMat = new THREE.MeshStandardMaterial({
         color: 0x1d4ed8,
         roughness: 0.35,
         metalness: 0.15
       });
 
-      // Materiale spettatori con texture volto e abbigliamento adulto
-      const faceTexture = createAdultFaceTexture();
-      const spectatorMat = new THREE.MeshStandardMaterial({
-        map: faceTexture,
-        roughness: 0.65,
-        metalness: 0.05
+      // 2. Materiale Abbigliamento opaco e realistico (SENZA TEXTURE DEL VISO SUL PETTO!)
+      const clothesMat = new THREE.MeshStandardMaterial({
+        roughness: 0.88,
+        metalness: 0.02
       });
 
-      const crowdColors = [
-        0xdc2626, // Rosso
-        0xffffff, // Bianco
-        0x1e3a8a, // Blu scuro
-        0xfacc15, // Giallo
-        0x111827, // Nero
-        0x475569, // Grigio
-        0x0284c7, // Celeste
-        0x16a34a  // Verde
-      ];
+      // 3. Materiale Pelle Umana con texture viso in HD
+      const faceTexture = createAdultFaceTexture();
+      const skinMat = new THREE.MeshStandardMaterial({
+        map: faceTexture,
+        roughness: 0.85,
+        metalness: 0.02
+      });
+
+      // 4. Materiale Capelli 3D
+      const hairMat = new THREE.MeshStandardMaterial({
+        roughness: 0.95,
+        metalness: 0.0
+      });
 
       const steps = 15;
       const stepW = 1.15;
       const stepH = 0.90;
-      const totalDepth = steps * stepW;
-      const totalHeight = steps * stepH;
+      const totalDepth = steps * stepW; // 17.25m
+      const totalHeight = steps * stepH; // 13.50m
 
-      // Coordinate matematiche precise dei centri d'angolo
-      const X0 = 15;
-      const Z0 = 33;
-      const R0 = 22; // Raggio base del primo gradone
+      // GEOMETRIA DEGLI SPALTI CORRETTA:
+      // Campo: X da -32 a +32, Z da -50 a +50. Bandierine d'angolo a (32, 50).
+      // Impostiamo tribune rettilinee a 6m di distanza e raggio d'angolo R=10m.
+      // In questo modo il punto più vicino negli angoli a 45 gradi è a X=35.48, Z=53.48 (OLTRE 3.4m FUORI DAL CAMPO!).
+      const X_STAND = 38; // Spalti Ovest ed Est a 38m (6m dal fallo laterale)
+      const Z_STAND = 56; // Spalti Nord e Sud a 56m (6m dalla linea di fondo)
+      const R_CORNER = 10; // Raggio della curva d'angolo
+      const CX = X_STAND - R_CORNER; // 28m
+      const CZ = Z_STAND - R_CORNER; // 46m
 
-      // Settori da costruire
       const sectors = [];
 
       // A) 4 Tribune Rettilinee
       // Ovest (lungo asse Z)
       sectors.push({
         type: 'straight',
-        x: -(X0 + R0), z: 0,
+        x: -X_STAND, z: 0,
         rotY: -Math.PI / 2,
-        length: Z0 * 2
+        length: CZ * 2
       });
       // Est
       sectors.push({
         type: 'straight',
-        x:  (X0 + R0), z: 0,
+        x:  X_STAND, z: 0,
         rotY:  Math.PI / 2,
-        length: Z0 * 2
+        length: CZ * 2
       });
       // Nord (dietro porta Nord)
       sectors.push({
         type: 'straight',
-        x: 0, z: -(Z0 + R0),
+        x: 0, z: -Z_STAND,
         rotY: Math.PI,
-        length: X0 * 2
+        length: CX * 2
       });
       // Sud (dietro porta Sud)
       sectors.push({
         type: 'straight',
-        x: 0, z:  (Z0 + R0),
+        x: 0, z:  Z_STAND,
         rotY: 0,
-        length: X0 * 2
+        length: CX * 2
       });
 
-      // B) 4 Curve d'Angolo ad arco continuo (ciascuna divisa in 10 spicchi perfettamente adiacenti)
+      // B) 4 Curve d'Angolo esterne al campo (12 spicchi ciascuna)
       const cornerDefs = [
         // Nord-Ovest: raccorda Ovest (pi) a Nord (1.5*pi)
-        { cx: -X0, cz: -Z0, startAngle: Math.PI,     endAngle: Math.PI * 1.5 },
+        { cx: -CX, cz: -CZ, startAngle: Math.PI,       endAngle: Math.PI * 1.5 },
         // Nord-Est: raccorda Nord (1.5*pi) a Est (2*pi)
-        { cx:  X0, cz: -Z0, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2.0 },
+        { cx:  CX, cz: -CZ, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2.0 },
         // Sud-Est: raccorda Est (0) a Sud (0.5*pi)
-        { cx:  X0, cz:  Z0, startAngle: 0,           endAngle: Math.PI * 0.5 },
+        { cx:  CX, cz:  CZ, startAngle: 0,             endAngle: Math.PI * 0.5 },
         // Sud-Ovest: raccorda Sud (0.5*pi) a Ovest (pi)
-        { cx: -X0, cz:  Z0, startAngle: Math.PI * 0.5, endAngle: Math.PI }
+        { cx: -CX, cz:  CZ, startAngle: Math.PI * 0.5, endAngle: Math.PI }
       ];
 
-      const slicesPerCorner = 10;
+      const slicesPerCorner = 12;
       cornerDefs.forEach(c => {
         const dTheta = (c.endAngle - c.startAngle) / slicesPerCorner;
         for (let i = 0; i < slicesPerCorner; i++) {
@@ -1404,35 +1517,47 @@
         }
       });
 
-      // Calcolo capienza per InstancedMesh
+      // Calcolo capienza posti
       let totalSeats = 0;
       sectors.forEach(sec => {
         if (sec.type === 'straight') {
           totalSeats += steps * Math.floor(sec.length / 0.65);
         } else {
           for (let s = 0; s < steps; s++) {
-            const r = R0 + s * stepW;
-            const sliceWidth = r * sec.dTheta * 1.04;
+            const r = R_CORNER + s * stepW;
+            const sliceWidth = (r + stepW / 2) * sec.dTheta * 1.06;
             totalSeats += Math.max(3, Math.floor(sliceWidth / 0.65));
           }
         }
       });
 
+      const maxHumans = Math.floor(totalSeats * 0.92); // 92% di riempimento realistico
+
+      // 1. InstancedMesh Seggiolini
       const seatGeo = createRealisticSeatGeometry();
       const seatMesh = new THREE.InstancedMesh(seatGeo, seatMat, totalSeats);
       seatMesh.receiveShadow = true;
 
-      const humanGeo = createAdultHumanSpectatorGeometry();
-      const maxHumans = Math.floor(totalSeats * 0.88);
-      const humanMesh = new THREE.InstancedMesh(humanGeo, spectatorMat, maxHumans);
-      humanMesh.castShadow = true;
+      // 2. InstancedMesh Vestiti Casual ("VESTITI A CASO")
+      const clothesGeo = createRealisticClothesGeometry();
+      const clothesMesh = new THREE.InstancedMesh(clothesGeo, clothesMat, maxHumans);
+      clothesMesh.castShadow = true;
+
+      // 3. InstancedMesh Pelle Umana (ROSA E MARRONE)
+      const skinGeo = createRealisticSkinGeometry();
+      const skinMesh = new THREE.InstancedMesh(skinGeo, skinMat, maxHumans);
+      skinMesh.castShadow = true;
+
+      // 4. InstancedMesh Capelli 3D
+      const hairGeo = createRealisticHairGeometry();
+      const hairMesh = new THREE.InstancedMesh(hairGeo, hairMat, maxHumans);
+      hairMesh.castShadow = true;
 
       let seatIdx = 0;
       let humanIdx = 0;
       const dummy = new THREE.Object3D();
-      const colorHelper = new THREE.Color();
 
-      // Costruzione dei gradoni e piazzamento spettatori
+      // Generazione degli spalti e popolamento dei tifosi
       sectors.forEach(sec => {
         const group = new THREE.Group();
 
@@ -1453,7 +1578,6 @@
               const localY = s * stepH + stepH;
               const localZ = tierZ;
 
-              // Gli spettatori e i seggiolini guardano verso il campo (rotazione zero locale, -Z)
               dummy.position.set(localX, localY, localZ);
               dummy.rotation.set(0, 0, 0);
               dummy.updateMatrix();
@@ -1466,18 +1590,31 @@
               seatMesh.setMatrixAt(seatIdx, worldMtx);
               seatIdx++;
 
-              if (Math.random() < 0.86 && humanIdx < maxHumans) {
-                humanMesh.setMatrixAt(humanIdx, worldMtx);
-                const col = crowdColors[Math.floor(Math.random() * crowdColors.length)];
-                colorHelper.setHex(col);
-                humanMesh.setColorAt(humanIdx, colorHelper);
+              if (Math.random() < 0.92 && humanIdx < maxHumans) {
+                // Posiziona i componenti dello spettatore
+                clothesMesh.setMatrixAt(humanIdx, worldMtx);
+                skinMesh.setMatrixAt(humanIdx, worldMtx);
+                hairMesh.setMatrixAt(humanIdx, worldMtx);
+
+                // Colore vestiti casual a caso
+                const clothCol = CASUAL_CLOTHES_COLORS[Math.floor(Math.random() * CASUAL_CLOTHES_COLORS.length)];
+                clothesMesh.setColorAt(humanIdx, clothCol);
+
+                // Colore pelle umana reale (rosa, pesca, beige, marrone, cioccolato)
+                const skinCol = REAL_SKIN_COLORS[Math.floor(Math.random() * REAL_SKIN_COLORS.length)];
+                skinMesh.setColorAt(humanIdx, skinCol);
+
+                // Colore capelli naturali
+                const hairCol = REAL_HAIR_COLORS[Math.floor(Math.random() * REAL_HAIR_COLORS.length)];
+                hairMesh.setColorAt(humanIdx, hairCol);
+
                 humanIdx++;
               }
             }
           }
 
           // Tetto dritto perfettamente ancorato
-          const roofGeo = new THREE.BoxGeometry(sec.length + 0.5, 0.45, totalDepth + 4);
+          const roofGeo = new THREE.BoxGeometry(sec.length + 1.0, 0.45, totalDepth + 4);
           const roofMat = new THREE.MeshStandardMaterial({
             color: 0x475569,
             roughness: 0.35,
@@ -1495,15 +1632,15 @@
           scene.add(group);
 
         } else if (sec.type === 'corner_slice') {
-          // Spicchio della curva: ogni gradone si estende ad arco con zero fessure
+          // Spicchio della curva d'angolo: non invade il campo e raccorda perfettamente i lati
           for (let s = 0; s < steps; s++) {
-            const r = R0 + s * stepW;
+            const r = R_CORNER + s * stepW;
             const tierY = s * stepH + stepH / 2;
-            const sliceWidth = r * sec.dTheta * 1.05; // 5% di sovrapposizione per sigillare ogni fessura
+            const sliceWidth = (r + stepW / 2) * sec.dTheta * 1.06;
 
             const tier = new THREE.Mesh(new THREE.BoxGeometry(sliceWidth, stepH, stepW), concreteMat);
-            const gx = sec.cx + Math.cos(sec.theta) * r;
-            const gz = sec.cz + Math.sin(sec.theta) * r;
+            const gx = sec.cx + Math.cos(sec.theta) * (r + stepW / 2);
+            const gz = sec.cz + Math.sin(sec.theta) * (r + stepW / 2);
             tier.position.set(gx, tierY, gz);
             tier.rotation.y = sec.rotY;
             tier.receiveShadow = true;
@@ -1524,19 +1661,28 @@
               seatMesh.setMatrixAt(seatIdx, worldMtx);
               seatIdx++;
 
-              if (Math.random() < 0.86 && humanIdx < maxHumans) {
-                humanMesh.setMatrixAt(humanIdx, worldMtx);
-                const col = crowdColors[Math.floor(Math.random() * crowdColors.length)];
-                colorHelper.setHex(col);
-                humanMesh.setColorAt(humanIdx, colorHelper);
+              if (Math.random() < 0.92 && humanIdx < maxHumans) {
+                clothesMesh.setMatrixAt(humanIdx, worldMtx);
+                skinMesh.setMatrixAt(humanIdx, worldMtx);
+                hairMesh.setMatrixAt(humanIdx, worldMtx);
+
+                const clothCol = CASUAL_CLOTHES_COLORS[Math.floor(Math.random() * CASUAL_CLOTHES_COLORS.length)];
+                clothesMesh.setColorAt(humanIdx, clothCol);
+
+                const skinCol = REAL_SKIN_COLORS[Math.floor(Math.random() * REAL_SKIN_COLORS.length)];
+                skinMesh.setColorAt(humanIdx, skinCol);
+
+                const hairCol = REAL_HAIR_COLORS[Math.floor(Math.random() * REAL_HAIR_COLORS.length)];
+                hairMesh.setColorAt(humanIdx, hairCol);
+
                 humanIdx++;
               }
             }
           }
 
-          // Tetto dello spicchio d'angolo (sovrapposto a ventaglio continuo, zero buchi)
-          const outerR = R0 + totalDepth / 2;
-          const cornerRoofWidth = outerR * sec.dTheta * 1.15;
+          // Tetto a ventaglio continuo per lo spicchio d'angolo
+          const outerR = R_CORNER + totalDepth / 2;
+          const cornerRoofWidth = (R_CORNER + totalDepth) * sec.dTheta * 1.15;
           const cornerRoofGeo = new THREE.BoxGeometry(cornerRoofWidth, 0.45, totalDepth + 4);
           const roofMat = new THREE.MeshStandardMaterial({
             color: 0x475569,
@@ -1557,13 +1703,21 @@
       seatMesh.instanceMatrix.needsUpdate = true;
       scene.add(seatMesh);
 
-      humanMesh.instanceMatrix.needsUpdate = true;
-      if (humanMesh.instanceColor) humanMesh.instanceColor.needsUpdate = true;
-      scene.add(humanMesh);
+      clothesMesh.instanceMatrix.needsUpdate = true;
+      if (clothesMesh.instanceColor) clothesMesh.instanceColor.needsUpdate = true;
+      scene.add(clothesMesh);
+
+      skinMesh.instanceMatrix.needsUpdate = true;
+      if (skinMesh.instanceColor) skinMesh.instanceColor.needsUpdate = true;
+      scene.add(skinMesh);
+
+      hairMesh.instanceMatrix.needsUpdate = true;
+      if (hairMesh.instanceColor) hairMesh.instanceColor.needsUpdate = true;
+      scene.add(hairMesh);
 
       // C) MURO PERIMETRALE ESTERNO SIGILLATO AL 100%: NESSUN BUCO DIETRO GLI SPALTI
-      const maxOuterRadius = Math.max(X0, Z0) + R0 + totalDepth + 1.5;
-      const wallGeo = new THREE.CylinderGeometry(maxOuterRadius, maxOuterRadius, totalHeight + 6, 48, 1, true);
+      const maxOuterRadius = Math.max(X_STAND, Z_STAND) + totalDepth + 4.0;
+      const wallGeo = new THREE.CylinderGeometry(maxOuterRadius, maxOuterRadius, totalHeight + 8, 64, 1, true);
       const wallMat = new THREE.MeshStandardMaterial({
         color: 0x1e293b,
         roughness: 0.8,
@@ -1571,7 +1725,7 @@
         side: THREE.BackSide
       });
       const wallMesh = new THREE.Mesh(wallGeo, wallMat);
-      wallMesh.position.set(0, (totalHeight + 6) / 2, 0);
+      wallMesh.position.set(0, (totalHeight + 8) / 2, 0);
       scene.add(wallMesh);
 
       // D) LUCE AMBIENTALE CHE ILLUMINA IL TETTO DAL BASSO (ZERO CHIAZZE NERE)
