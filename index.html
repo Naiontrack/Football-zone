@@ -995,124 +995,250 @@
     }
     createLEDAdBoards();
 
-    // --- 7. STADIO CORRETTO: SPALTI VERSO L'ESTERNO E COMPLETAMENTE PIENI DI SPETTATORI ---
-    function buildGrandStadiumCorrected() {
-      const concreteMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 });
-      const seatColorPalette = [0x00f0ff, 0xff0055, 0xffbb00, 0xffffff, 0x00ff88, 0x3b82f6, 0xec4899, 0xa855f7];
+    // Helper per fondere BufferGeometry senza dipendenze esterne
+    function mergeGeometries(geos) {
+      let totalPos = 0;
+      geos.forEach(g => {
+        const nonIndexed = g.index ? g.toNonIndexed() : g;
+        totalPos += nonIndexed.attributes.position.array.length;
+      });
+      const posArray = new Float32Array(totalPos);
+      const normArray = new Float32Array(totalPos);
+      let offset = 0;
+      geos.forEach(g => {
+        const nonIndexed = g.index ? g.toNonIndexed() : g;
+        const pos = nonIndexed.attributes.position.array;
+        const norm = nonIndexed.attributes.normal.array;
+        posArray.set(pos, offset);
+        normArray.set(norm, offset);
+        offset += pos.length;
+      });
+      const merged = new THREE.BufferGeometry();
+      merged.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+      merged.setAttribute('normal', new THREE.BufferAttribute(normArray, 3));
+      return merged;
+    }
 
-      // Definiamo le 4 tribune.
-      // Il campo ha centro a (0, 0).
-      // Per orientare gli spalti correttamente:
-      // La prima fila (bassa) è VICINA al campo (distanza minima).
-      // Salendo in altezza (Y crescente), la fila si ALLONTANA DAL CAMPO verso l'esterno (+Z locale crescente verso l'esterno).
-      const standsConfigs = [
-        // Tribuna Ovest (asse X negativo): guarda verso +X (centro)
-        { 
-          posX: -FIELD_WIDTH / 2 - 3.5, posZ: 0, 
-          dirX: -1, dirZ: 0, // Si sviluppa allontanandosi verso -X
-          rotY: -Math.PI / 2, 
-          length: FIELD_LENGTH + 8, width: 20, height: 16 
-        },
-        // Tribuna Est (asse X positivo): guarda verso -X (centro)
-        { 
-          posX: FIELD_WIDTH / 2 + 3.5, posZ: 0, 
-          dirX: 1, dirZ: 0, // Si sviluppa allontanandosi verso +X
-          rotY: Math.PI / 2, 
-          length: FIELD_LENGTH + 8, width: 20, height: 16 
-        },
-        // Curva Nord (dietro porta Nord, Z negativo): guarda verso +Z (centro)
-        { 
-          posX: 0, posZ: -FIELD_LENGTH / 2 - 4.2, 
-          dirX: 0, dirZ: -1, // Si sviluppa allontanandosi verso -Z
-          rotY: Math.PI, 
-          length: FIELD_WIDTH + 8, width: 20, height: 16 
-        },
-        // Curva Sud (dietro porta Sud, Z positivo): guarda verso -Z (centro)
-        { 
-          posX: 0, posZ: FIELD_LENGTH / 2 + 4.2, 
-          dirX: 0, dirZ: 1, // Si sviluppa allontanandosi verso +Z
-          rotY: 0, 
-          length: FIELD_WIDTH + 8, width: 20, height: 16 
-        }
-      ];
+    // Geometria realistica Seggiolino da Stadio (seduta + schienale blu)
+    function createRealisticSeatGeometry() {
+      const seatBase = new THREE.BoxGeometry(0.48, 0.08, 0.38);
+      seatBase.translate(0, 0.1, 0);
 
-      // Calcoliamo la capienza totale per riempire OGNI panchina al 100%
-      const steps = 14;
-      let totalCapacity = 0;
-      standsConfigs.forEach(conf => {
-        const spectatorsPerRow = Math.floor(conf.length / 0.85);
-        totalCapacity += steps * spectatorsPerRow;
+      const seatBack = new THREE.BoxGeometry(0.48, 0.45, 0.08);
+      seatBack.translate(0, 0.32, -0.16);
+
+      return mergeGeometries([seatBase, seatBack]);
+    }
+
+    // Geometria realistica Spettatore 3D (Forma Umana: Testa sferica + Spalle/Busto + Gambe sedute)
+    function createHumanSpectatorGeometry() {
+      // 1. Testa realistica
+      const head = new THREE.SphereGeometry(0.12, 12, 10);
+      head.translate(0, 0.65, 0);
+
+      // 2. Busto e spalle da seduto
+      const torso = new THREE.CylinderGeometry(0.16, 0.20, 0.42, 10);
+      torso.translate(0, 0.38, 0);
+
+      // 3. Braccia e spalle
+      const shoulders = new THREE.BoxGeometry(0.46, 0.12, 0.24);
+      shoulders.translate(0, 0.50, 0);
+
+      // 4. Gambe sedute in avanti
+      const legs = new THREE.BoxGeometry(0.38, 0.16, 0.36);
+      legs.translate(0, 0.14, 0.12);
+
+      return mergeGeometries([head, torso, shoulders, legs]);
+    }
+
+    // --- 7. STADIO TOTALMENTE CHIUSO CON CURVE, TETTO CONTINUO E PUBBLICO REALISTICO ---
+    function buildFullyEnclosedStadium() {
+      // Materiale cemento gradinate
+      const concreteMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
+
+      // Materiale seggiolini: TUTTI DI UN UNICO COLORE (Blu Stadio Reale)
+      const seatMat = new THREE.MeshStandardMaterial({
+        color: 0x1d4ed8, // Royal Blue
+        roughness: 0.4,
+        metalness: 0.1
       });
 
-      const spectatorGeo = new THREE.CylinderGeometry(0.22, 0.26, 0.82, 6);
-      const spectatorMat = new THREE.MeshStandardMaterial({ roughness: 0.7 });
-      const spectatorMesh = new THREE.InstancedMesh(spectatorGeo, spectatorMat, totalCapacity);
-      spectatorMesh.castShadow = true;
-      let spectatorIndex = 0;
+      // Materiale spettatori: maglie con colori realistici da stadio
+      const spectatorMat = new THREE.MeshStandardMaterial({ roughness: 0.65, metalness: 0.05 });
+      const crowdColors = [
+        0xdc2626, // Rosso
+        0xffffff, // Bianco
+        0x1e3a8a, // Blu scuro
+        0xfacc15, // Giallo
+        0x111827, // Nero
+        0x475569, // Grigio
+        0x0284c7, // Celeste
+        0x16a34a  // Verde
+      ];
 
+      const steps = 15;
+      const stepW = 1.25;
+      const stepH = 0.95;
+      const totalDepth = steps * stepW;
+      const totalHeight = steps * stepH;
+
+      // Coordinate interne delle gradinate
+      const innerW = FIELD_WIDTH / 2 + 3.2;  // ~35.2m
+      const innerL = FIELD_LENGTH / 2 + 4.0; // ~54.0m
+
+      // Definiamo i settori: 4 rettilinei + 4 curve d'angolo per chiudere al 100% lo stadio
+      const sectors = [];
+
+      // A) 4 Tribune Rettilinee
+      // Ovest
+      sectors.push({ type: 'straight', x: -innerW, z: 0, rotY: -Math.PI / 2, len: (innerL - 10) * 2 });
+      // Est
+      sectors.push({ type: 'straight', x:  innerW, z: 0, rotY:  Math.PI / 2, len: (innerL - 10) * 2 });
+      // Nord
+      sectors.push({ type: 'straight', x: 0, z: -innerL, rotY:  Math.PI,     len: (innerW - 8) * 2 });
+      // Sud
+      sectors.push({ type: 'straight', x: 0, z:  innerL, rotY:  0,           len: (innerW - 8) * 2 });
+
+      // B) 4 Curve d'Angolo (ciascuna composta da 3 spicchi angolari per curvare perfettamente)
+      const cornerOffsets = [
+        { cx: -(innerW - 8), cz: -(innerL - 10), startAngle: Math.PI,     endAngle: Math.PI * 1.5 }, // Nord-Ovest
+        { cx:  (innerW - 8), cz: -(innerL - 10), startAngle: Math.PI * 1.5, endAngle: Math.PI * 2.0 }, // Nord-Est
+        { cx:  (innerW - 8), cz:  (innerL - 10), startAngle: 0,           endAngle: Math.PI * 0.5 }, // Sud-Est
+        { cx: -(innerW - 8), cz:  (innerL - 10), startAngle: Math.PI * 0.5, endAngle: Math.PI }        // Sud-Ovest
+      ];
+
+      const cornerSlices = 3;
+      cornerOffsets.forEach(c => {
+        const dAngle = (c.endAngle - c.startAngle) / cornerSlices;
+        for (let i = 0; i < cornerSlices; i++) {
+          const midAngle = c.startAngle + (i + 0.5) * dAngle;
+          // Calcola posizione dello spicchio
+          const radius = 8.5;
+          const sx = c.cx + Math.cos(midAngle) * radius;
+          const sz = c.cz + Math.sin(midAngle) * radius;
+          sectors.push({
+            type: 'corner',
+            x: sx,
+            z: sz,
+            rotY: -midAngle + Math.PI / 2,
+            len: radius * dAngle * 1.35
+          });
+        }
+      });
+
+      // Calcoliamo la capienza totale di seggiolini
+      let totalSeatCount = 0;
+      sectors.forEach(sec => {
+        const seatsPerRow = Math.max(4, Math.floor(sec.len / 0.65));
+        totalSeatCount += steps * seatsPerRow;
+      });
+
+      // Creazione InstancedMesh per seggiolini (100% delle sedute) e persone (~85% dei posti)
+      const seatGeo = createRealisticSeatGeometry();
+      const seatMesh = new THREE.InstancedMesh(seatGeo, seatMat, totalSeatCount);
+      seatMesh.receiveShadow = true;
+
+      const humanGeo = createHumanSpectatorGeometry();
+      const maxHumans = Math.floor(totalSeatCount * 0.88);
+      const humanMesh = new THREE.InstancedMesh(humanGeo, spectatorMat, maxHumans);
+      humanMesh.castShadow = true;
+
+      let seatIndex = 0;
+      let humanIndex = 0;
       const dummy = new THREE.Object3D();
       const colorHelper = new THREE.Color();
 
-      standsConfigs.forEach(conf => {
-        const standGroup = new THREE.Group();
-        const stepW = conf.width / steps;
-        const stepH = conf.height / steps;
-        const spectatorsPerRow = Math.floor(conf.length / 0.85);
+      // Costruzione dei gradoni e piazzamento dei seggiolini/spettatori
+      sectors.forEach(sec => {
+        const sectorGroup = new THREE.Group();
+        const seatsPerRow = Math.max(4, Math.floor(sec.len / 0.65));
 
         for (let s = 0; s < steps; s++) {
-          // Gradone: salendo (s aumenta), si ALLONTANA dal campo lungo l'asse Z locale (+Z locale)
           const tierZ = s * stepW + stepW / 2;
           const tierY = s * stepH + stepH / 2;
 
-          const tierGeo = new THREE.BoxGeometry(conf.length, stepH, stepW);
+          // Gradone in cemento
+          const tierGeo = new THREE.BoxGeometry(sec.len, stepH, stepW);
           const tier = new THREE.Mesh(tierGeo, concreteMat);
           tier.position.set(0, tierY, tierZ);
           tier.receiveShadow = true;
-          standGroup.add(tier);
+          sectorGroup.add(tier);
 
-          // RIEMPIMENTO COMPLETO: Ogni posto è occupato al 100% (panchine piene!)
-          for (let i = 0; i < spectatorsPerRow && spectatorIndex < totalCapacity; i++) {
-            const localX = (i - spectatorsPerRow / 2) * 0.85 + 0.42;
-            const localY = (s + 1) * stepH + 0.41;
+          // Popolamento seggiolini & persone
+          for (let i = 0; i < seatsPerRow && seatIndex < totalSeatCount; i++) {
+            const localX = (i - seatsPerRow / 2) * 0.65 + 0.32;
+            const localY = s * stepH + stepH;
             const localZ = tierZ;
 
             dummy.position.set(localX, localY, localZ);
             dummy.rotation.set(0, 0, 0);
             dummy.updateMatrix();
 
-            const standMatrix = new THREE.Matrix4();
-            standMatrix.makeRotationY(conf.rotY);
-            standMatrix.setPosition(conf.posX, 0, conf.posZ);
+            const secMatrix = new THREE.Matrix4();
+            secMatrix.makeRotationY(sec.rotY);
+            secMatrix.setPosition(sec.x, 0, sec.z);
 
-            const globalMatrix = new THREE.Matrix4().multiplyMatrices(standMatrix, dummy.matrix);
-            spectatorMesh.setMatrixAt(spectatorIndex, globalMatrix);
+            const worldMatrix = new THREE.Matrix4().multiplyMatrices(secMatrix, dummy.matrix);
+            seatMesh.setMatrixAt(seatIndex, worldMatrix);
+            seatIndex++;
 
-            const col = seatColorPalette[(s * 3 + i) % seatColorPalette.length];
-            colorHelper.setHex(col);
-            spectatorMesh.setColorAt(spectatorIndex, colorHelper);
-            spectatorIndex++;
+            // Nella maggior parte dei seggiolini (~85%) c'è una persona
+            if (Math.random() < 0.86 && humanIndex < maxHumans) {
+              humanMesh.setMatrixAt(humanIndex, worldMatrix);
+              const col = crowdColors[Math.floor(Math.random() * crowdColors.length)];
+              colorHelper.setHex(col);
+              humanMesh.setColorAt(humanIndex, colorHelper);
+              humanIndex++;
+            }
           }
         }
 
-        // Tetto moderno dello stadio a sbalzo verso l'esterno
-        const roofGeo = new THREE.BoxGeometry(conf.length + 4, 0.6, conf.width + 6);
-        const roofMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.35, metalness: 0.8 });
+        // Tetto a sbalzo dello stadio (senza buchi, continuo)
+        const roofGeo = new THREE.BoxGeometry(sec.len + 1.2, 0.45, totalDepth + 5);
+        const roofMat = new THREE.MeshStandardMaterial({
+          color: 0x475569, // Grigio acciaio luminoso (no nero pece)
+          roughness: 0.3,
+          metalness: 0.6,
+          side: THREE.DoubleSide
+        });
         const roof = new THREE.Mesh(roofGeo, roofMat);
-        roof.position.set(0, conf.height + 3.5, conf.width / 2);
-        roof.rotation.x = -0.05; // inclinato dolcemente
+        roof.position.set(0, totalHeight + 4.5, totalDepth / 2 - 1.5);
+        roof.rotation.x = 0.04;
         roof.castShadow = true;
-        standGroup.add(roof);
+        sectorGroup.add(roof);
 
-        standGroup.position.set(conf.posX, 0, conf.posZ);
-        standGroup.rotation.y = conf.rotY;
-        scene.add(standGroup);
+        sectorGroup.position.set(sec.x, 0, sec.z);
+        sectorGroup.rotation.y = sec.rotY;
+        scene.add(sectorGroup);
       });
 
-      spectatorMesh.instanceMatrix.needsUpdate = true;
-      if (spectatorMesh.instanceColor) spectatorMesh.instanceColor.needsUpdate = true;
-      scene.add(spectatorMesh);
+      seatMesh.instanceMatrix.needsUpdate = true;
+      scene.add(seatMesh);
+
+      humanMesh.instanceMatrix.needsUpdate = true;
+      if (humanMesh.instanceColor) humanMesh.instanceColor.needsUpdate = true;
+      scene.add(humanMesh);
+
+      // C) MURO PERIMETRALE ESTERNO (FACCIATA): CHIUDE TOTALMENTE LO STADIO ALL'ESTERNO
+      // "fuori dallo stadio non deve vedersi nulla"
+      const outerWallRadius = Math.max(innerW, innerL) + totalDepth + 2;
+      const wallGeo = new THREE.CylinderGeometry(outerWallRadius, outerWallRadius, totalHeight + 8, 36, 1, true);
+      const wallMat = new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        roughness: 0.7,
+        metalness: 0.3,
+        side: THREE.BackSide // Visibile dall'interno
+      });
+      const outerWall = new THREE.Mesh(wallGeo, wallMat);
+      outerWall.position.set(0, (totalHeight + 8) / 2, 0);
+      scene.add(outerWall);
+
+      // D) LUCE AMBIENTALE DAL BASSO: ELIMINA LE CHIAZZE NERE SOTTO IL TETTO
+      const upwardLight = new THREE.DirectionalLight(0xa5b4fc, 0.55);
+      upwardLight.position.set(0, -10, 0); // Illumina verso l'alto l'intradosso del tetto
+      scene.add(upwardLight);
     }
-    buildGrandStadiumCorrected();
+    buildFullyEnclosedStadium();
 
     // Bandierine d'angolo
     function createCornerFlags() {
@@ -1430,7 +1556,8 @@
     });
 
     window.addEventListener('keyup', (e) => {
-      if (isBindingPressed('shoot') && kickCharging) {
+      const b = userBindings['shoot'];
+      if (b && b.type === 'keyboard' && b.code === e.code && kickCharging) {
         releaseKick();
       }
       activeKeys[e.code] = false;
@@ -1439,7 +1566,8 @@
     window.addEventListener('mousedown', (e) => {
       activeMouseButtons[e.button] = true;
 
-      if (isBindingPressed('shoot') && isPointerLocked && !kickCharging) {
+      const b = userBindings['shoot'];
+      if (b && b.type === 'mouse' && b.code === e.button && isPointerLocked && !kickCharging) {
         startChargingKick();
       }
       if (isBindingPressed('tackle') && isPointerLocked && !player.isTackling) {
@@ -1448,7 +1576,8 @@
     });
 
     window.addEventListener('mouseup', (e) => {
-      if (isBindingPressed('shoot') && kickCharging) {
+      const b = userBindings['shoot'];
+      if (b && b.type === 'mouse' && b.code === e.button && kickCharging) {
         releaseKick();
       }
       activeMouseButtons[e.button] = false;
@@ -1671,10 +1800,14 @@
       player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
 
       // Controlla se il tiro da gamepad è premuto/rilasciato
-      const shootPressed = isBindingPressed('shoot') || gp.buttons[2]?.pressed || gp.buttons[7]?.pressed;
-      if (shootPressed && !kickCharging) {
+      const isShootHeld = (userBindings.shoot.type === 'gamepad' && isBindingPressed('shoot')) ||
+                          (userBindings.shoot.type === 'mouse' && !!activeMouseButtons[userBindings.shoot.code]) ||
+                          (userBindings.shoot.type === 'keyboard' && !!activeKeys[userBindings.shoot.code]) ||
+                          !!gp.buttons[2]?.pressed || !!gp.buttons[7]?.pressed;
+
+      if (isShootHeld && !kickCharging) {
         startChargingKick();
-      } else if (!shootPressed && kickCharging && (userBindings.shoot.type === 'gamepad' || !activeMouseButtons[0])) {
+      } else if (!isShootHeld && kickCharging) {
         releaseKick();
       }
 
@@ -1839,26 +1972,34 @@
       const isBallOnGround = ball.pos.y < 0.65;
       const touchRadius = player.radius + ball.radius + 0.35; // Raggio di controllo ai piedi
 
-      if (distHoriz < touchRadius && isBallOnGround && !kickCharging) {
-        // Tocco naturale: invece di incollarsi, la palla riceve una spinta morbida nella direzione di marcia del giocatore
+      if (distHoriz < touchRadius && isBallOnGround) {
         toBall.normalize();
 
-        // Se il giocatore si muove verso la palla, accompagnala dolcemente
-        if (moveDir.lengthSq() > 0) {
-          const moveSpeed = isSprinting ? 9.5 : 6.0;
-          ball.vel.x = THREE.MathUtils.lerp(ball.vel.x, moveDir.x * moveSpeed, 0.25);
-          ball.vel.z = THREE.MathUtils.lerp(ball.vel.z, moveDir.z * moveSpeed, 0.25);
+        if (kickCharging) {
+          // Durante la carica del tiro, mantieni la palla ordinatamente ai piedi senza calciare o farla volare
+          const holdDistance = player.radius + ball.radius + 0.15;
+          ball.pos.x = player.pos.x + toBall.x * holdDistance;
+          ball.pos.z = player.pos.z + toBall.z * holdDistance;
+          ball.vel.x *= 0.85;
+          ball.vel.z *= 0.85;
         } else {
-          // Se il giocatore è fermo, rallenta dolcemente la palla senza incollarla
-          ball.vel.x *= 0.92;
-          ball.vel.z *= 0.92;
-        }
+          // Tocco naturale in corsa
+          if (moveDir.lengthSq() > 0) {
+            const moveSpeed = isSprinting ? 9.5 : 6.0;
+            ball.vel.x = THREE.MathUtils.lerp(ball.vel.x, moveDir.x * moveSpeed, 0.25);
+            ball.vel.z = THREE.MathUtils.lerp(ball.vel.z, moveDir.z * moveSpeed, 0.25);
+          } else {
+            // Se il giocatore è fermo, rallenta dolcemente la palla senza incollarla
+            ball.vel.x *= 0.92;
+            ball.vel.z *= 0.92;
+          }
 
-        // Evita che il giocatore compenetri la palla
-        const minDistance = player.radius + ball.radius;
-        if (distHoriz < minDistance) {
-          ball.pos.x = player.pos.x + toBall.x * minDistance;
-          ball.pos.z = player.pos.z + toBall.z * minDistance;
+          // Evita che il giocatore compenetri la palla
+          const minDistance = player.radius + ball.radius;
+          if (distHoriz < minDistance) {
+            ball.pos.x = player.pos.x + toBall.x * minDistance;
+            ball.pos.z = player.pos.z + toBall.z * minDistance;
+          }
         }
       }
 
